@@ -1,0 +1,1166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Learning on the Job: Test-Time Adaptation and the Road to Self-Improving Robots — Field Notes</title>
+<meta name="description" content="Test-time adaptation, test-time training, and the road to recursively self-improving robots — a roboticist's field guide through the TTA literature and the 2023–26 robot data engines.">
+<link rel="icon" href="../../favicon.svg" type="image/svg+xml">
+<style>
+  :root {
+    --ink: #1c1a17;
+    --muted: #6f6a62;
+    --faint: #a7a29a;
+    --line: #e4e1db;
+    --paper: #ffffff;
+    --link: #0f6d8c;
+    --coral: #ef8677;
+    --coral-soft: #fbd9d2;
+    --amber: #f2a93b;
+    --amber-soft: #fbe8c8;
+    --teal: #4fb3bf;
+    --teal-soft: #d7edef;
+    --lilac: #a78bdb;
+    --lilac-soft: #e9e1f7;
+    --cream: #fdf4e4;
+    --gray-block: #dcdcdc;
+    --gray-block-lt: #ececec;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    --serif: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+  }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: var(--serif);
+    color: var(--ink);
+    background: var(--paper);
+    line-height: 1.72;
+    font-size: 18px;
+    margin: 0;
+    padding: 0 1.25rem;
+  }
+  .wrap { max-width: 42.5rem; margin: 0 auto; padding: 3.5rem 0 6rem; }
+  header.post-head { margin-bottom: 2.6rem; }
+  h1.post-title {
+    font-size: 2.05rem;
+    line-height: 1.22;
+    margin: 0 0 0.9rem;
+    letter-spacing: -0.012em;
+    text-wrap: balance;
+    font-weight: 700;
+  }
+  .meta {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--muted);
+    letter-spacing: 0.01em;
+  }
+  .meta b { color: var(--ink); font-weight: 600; }
+  h2 { font-size: 1.42rem; line-height: 1.3; margin: 3.1rem 0 0.9rem; letter-spacing: -0.008em; text-wrap: balance; }
+  h3 { font-size: 1.12rem; line-height: 1.35; margin: 2.2rem 0 0.7rem; text-wrap: balance; }
+  h2 .sec-no, h3 .sec-no { color: var(--faint); font-weight: 400; margin-right: 0.45em; font-variant-numeric: tabular-nums; }
+  p { margin: 0 0 1.05rem; }
+  a { color: var(--link); text-decoration: none; border-bottom: 1px solid rgba(15,109,140,0.28); }
+  a:hover { border-bottom-color: var(--link); }
+  a:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; border-radius: 2px; }
+  strong { font-weight: 700; }
+  em.term { font-style: italic; }
+  code, .mono { font-family: var(--mono); font-size: 0.86em; }
+  code.chip { background: #f4f2ee; border: 1px solid var(--line); border-radius: 4px; padding: 0.05em 0.35em; white-space: nowrap; }
+
+  /* table of contents */
+  nav.toc {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 1.1rem 1.4rem 1.15rem;
+    margin: 2rem 0 2.4rem;
+    font-size: 0.92rem;
+    line-height: 1.55;
+    background: #fcfbf9;
+  }
+  nav.toc .toc-title {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 0.6rem;
+  }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; }
+  nav.toc ol ol { margin-top: 0.15rem; }
+  nav.toc li { margin: 0.22rem 0; }
+  nav.toc a { border-bottom: none; }
+  nav.toc a:hover { border-bottom: 1px solid var(--link); }
+
+  /* figures */
+  figure.fig { margin: 2.1rem 0 2.3rem; }
+  figure.fig .fig-scroll { overflow-x: auto; }
+  figure.fig svg { display: block; margin: 0 auto; max-width: 100%; height: auto; }
+  figure.fig figcaption {
+    font-size: 0.85rem;
+    color: var(--muted);
+    line-height: 1.55;
+    margin: 0.85rem auto 0;
+    max-width: 36rem;
+    text-align: center;
+  }
+  figure.fig figcaption .figno { font-family: var(--mono); font-size: 0.78rem; color: var(--ink); font-weight: 600; }
+
+  /* equations */
+  .eq {
+    text-align: center;
+    margin: 1.35rem 0;
+    font-size: 1.02rem;
+    line-height: 1.9;
+    overflow-x: auto;
+    padding: 0.1rem 0;
+  }
+  .eq .m, em.m { font-style: italic; }
+  .m { font-family: var(--serif); }
+  sub, sup { font-size: 0.68em; line-height: 0; }
+
+  /* tables */
+  .tbl-scroll { overflow-x: auto; margin: 1.6rem 0 1.9rem; }
+  table.tbl { border-collapse: collapse; font-size: 0.86rem; line-height: 1.5; min-width: 100%; }
+  table.tbl th, table.tbl td { border: 1px solid var(--line); padding: 0.5rem 0.65rem; text-align: left; vertical-align: top; }
+  table.tbl th { background: #f7f5f1; font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  table.tbl td .name { font-weight: 700; }
+  table.tbl td { font-variant-numeric: tabular-nums; }
+
+  /* callouts & quotes */
+  blockquote {
+    margin: 1.5rem 0;
+    padding: 0.15rem 0 0.15rem 1.15rem;
+    border-left: 3px solid var(--coral);
+    color: #3d3a35;
+    font-size: 0.97rem;
+  }
+  blockquote p { margin-bottom: 0.55rem; }
+  .aside {
+    background: var(--cream);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    margin: 1.6rem 0;
+    font-size: 0.93rem;
+    line-height: 1.62;
+  }
+  .aside .aside-tag { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: #b07c22; display: block; margin-bottom: 0.35rem; }
+
+  /* lists */
+  ul, ol { padding-left: 1.35rem; margin: 0 0 1.1rem; }
+  li { margin: 0.3rem 0; }
+  li::marker { color: var(--faint); }
+
+  /* footnotes & references */
+  .refs { font-size: 0.84rem; line-height: 1.6; }
+  .refs ol { padding-left: 1.6rem; }
+  .refs li { margin: 0.5rem 0; }
+  .fn { font-size: 0.72em; vertical-align: super; line-height: 0; font-family: var(--mono); }
+  .footnotes { font-size: 0.84rem; color: #4a463f; border-top: 1px solid var(--line); margin-top: 2.5rem; padding-top: 1rem; }
+  .footnotes p { margin-bottom: 0.5rem; }
+  pre.bibtex {
+    background: #f7f5f1;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    font-family: var(--mono);
+    font-size: 0.76rem;
+    line-height: 1.55;
+    overflow-x: auto;
+  }
+  .tags { margin-top: 3rem; font-family: var(--mono); font-size: 0.76rem; color: var(--muted); }
+  .tags span { border: 1px solid var(--line); border-radius: 999px; padding: 0.18rem 0.65rem; margin-right: 0.4rem; white-space: nowrap; display: inline-block; margin-bottom: 0.4rem; }
+  hr.sect { border: none; border-top: 1px solid var(--line); margin: 3rem auto; width: 38%; }
+
+  @media (max-width: 640px) {
+    body { font-size: 16.5px; }
+    h1.post-title { font-size: 1.62rem; }
+    h2 { font-size: 1.28rem; }
+  }
+
+  /* --- site chrome --- */
+  .site-top { max-width: 42.5rem; margin: 0 auto; padding-top: 1.5rem; font-family: var(--mono); font-size: 0.78rem; }
+  .site-top a { color: var(--muted); border-bottom: none; }
+  .site-top a:hover { color: var(--link); }
+  footer.site-foot { max-width: 42.5rem; margin: -2.5rem auto 0; padding: 1.4rem 0 2.6rem; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 0.72rem; color: var(--faint); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; }
+  footer.site-foot a { color: var(--muted); border-bottom-color: var(--line); }
+</style>
+</head>
+<body>
+<nav class="site-top"><a href="../../">&larr; Field Notes</a></nav>
+<div class="wrap">
+<header class="post-head">
+  <h1 class="post-title">Learning on the Job: Test-Time Adaptation and the Road to Self-Improving Robots</h1>
+  <div class="meta">Date: September 16, 2026 &nbsp;|&nbsp; Estimated Reading Time: ~45 min &nbsp;|&nbsp; Author: Alice</div>
+</header>
+
+<svg aria-hidden="true" style="position:absolute;width:0;height:0" focusable="false">
+  <defs>
+    <marker id="ah-gray" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0.8 L9,5 L0,9.2 Z" fill="#9a968f"></path>
+    </marker>
+    <marker id="ah-ink" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0.8 L9,5 L0,9.2 Z" fill="#2b2926"></path>
+    </marker>
+    <marker id="ah-coral" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0.8 L9,5 L0,9.2 Z" fill="#ef8677"></path>
+    </marker>
+    <marker id="ah-teal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0.8 L9,5 L0,9.2 Z" fill="#4fb3bf"></path>
+    </marker>
+    <marker id="ah-amber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0.8 L9,5 L0,9.2 Z" fill="#e09a2b"></path>
+    </marker>
+  </defs>
+</svg>
+<style>
+  /* shared svg figure classes */
+  .svL { font-family: var(--mono); font-size: 13px; fill: #1c1a17; }
+  .svLs { font-family: var(--mono); font-size: 11.5px; fill: #1c1a17; }
+  .svN { font-family: var(--mono); font-size: 10.5px; fill: #9a958d; letter-spacing: 0.08em; }
+  .svT { font-family: var(--mono); font-size: 14px; fill: #1c1a17; font-weight: 700; }
+  .svBox { fill: #ffffff; stroke: #2b2926; stroke-width: 2; }
+  .svBlk { fill: #dcdcdc; }
+  .svBlkLt { fill: #ececec; }
+  .svArr { stroke: #9a968f; stroke-width: 1.8; fill: none; }
+  .svArrI { stroke: #2b2926; stroke-width: 1.8; fill: none; }
+  .svCoral { fill: #ef8677; }
+  .svCoralSoft { fill: #fbd9d2; }
+  .svAmber { fill: #f2a93b; }
+  .svAmberSoft { fill: #fbe8c8; }
+  .svTeal { fill: #4fb3bf; }
+  .svTealSoft { fill: #d7edef; }
+  .svLilac { fill: #a78bdb; }
+  .svLilacSoft { fill: #e9e1f7; }
+  .svCream { fill: #fdf4e4; }
+</style>
+
+<p>The idea of <strong>recursive self-improvement (RSI)</strong> is old by AI standards: <a href="https://philpapers.org/rec/GOOSCT">I. J. Good (1965)</a> imagined an ultraintelligent machine that could design better machines than itself, and <a href="https://www.lesswrong.com/posts/JBadX7rwdcRFzGuju/recursive-self-improvement">Yudkowsky (2008)</a> later gave the name to the specific feedback loop where a system uses its current intelligence to improve the machinery that produces its intelligence. For most of the field&rsquo;s history this was a philosophical conversation. In the last two years it has quietly become an engineering conversation: coding agents now write meaningful fractions of the code — including infrastructure that trains and evaluates their successors — and Lilian Weng&rsquo;s recent post on <a href="https://lilianweng.github.io/posts/2026-07-04-harness/">harness engineering for self-improvement</a> (<a href="https://lilianweng.github.io/posts/2026-07-04-harness/">Weng, 2026</a>) treats RSI not as a singularity thought experiment but as a systems problem: loops, artifacts, evaluators, and the scaffolding that lets a model improve the system it runs inside.</p>
+
+<p>This post is about what that conversation looks like when the agent has a body. Roboticists tend to have one of two reflexive reactions to &ldquo;self-improving robots.&rdquo; The first: <em>we&rsquo;ve had this since the 1950s — it&rsquo;s called adaptive control.</em> The second: <em>it cannot work — real robots have no reset button, no reward function, and every failure costs hardware, time, or safety.</em> Both reactions are responses to the same structural fact. For a robot, <strong>&ldquo;test time&rdquo; is not a benchmark pass; it is the entire operational life of the system</strong>, and the data distribution it faces at test time is partly authored by its own actions. That single inversion — the test set fights back — is, I&rsquo;ll argue, the right lens for both the promise and the difficulty of RSI in robotics.</p>
+
+<p>I recently spent an evening with a group of AI researchers and founders arguing about exactly this, and the transcript of that discussion (noisy, occasionally mistranscribed, surprisingly convergent) is one of three inputs to this post. The second input is the <strong>test-time adaptation (TTA)</strong> literature — a large, mature body of computer-vision work on updating models after training, organized by <a href="https://arxiv.org/abs/2303.15361">Liang et al. (2024)</a> into source-free domain adaptation, test-time batch adaptation, online test-time adaptation, and test-time prior adaptation; I went through the survey&rsquo;s <a href="https://github.com/tim-learn/awesome-test-time-adaptation">companion paper list</a> (close to two thousand entries as of this writing) so you don&rsquo;t have to. The third input is the robot-learning literature&rsquo;s own deployment-time lineage, which mostly doesn&rsquo;t cite the first one: online system identification, rapid motor adaptation, real-world RL fine-tuning, and the fleet-scale &ldquo;data engine&rdquo; systems of 2023&ndash;2026.</p>
+
+<p>Throughout, I&rsquo;ll keep three levels of the problem separate, because conflating them is the main source of talking-past-each-other in this area:</p>
+
+<ul>
+  <li><strong>Adaptation</strong>: the robot tracks a changing world. Performance returns to baseline after a perturbation (new lighting, worn gears, different payload). The signal is cheap and self-supervised; the effect is usually transient.</li>
+  <li><strong>Improvement</strong>: the robot gets monotonically better at a fixed task distribution as it accumulates experience. This requires a signal of <em>better</em> — a reward, a verifier, a human — not just a signal of <em>different</em>.</li>
+  <li><strong>Recursive self-improvement</strong>: the machinery that produces improvement — data engine, verifiers, reward models, simulators, curricula — itself improves as a byproduct of operation. This is the regime Weng&rsquo;s post describes for software agents, and the one robotics is only beginning to enter.</li>
+</ul>
+
+<figure class="fig">
+<div class="fig-scroll">
+<svg viewBox="0 0 760 300" role="img" aria-label="Three panels: frozen deployment, test-time adaptation, and a self-improvement engine" style="min-width:640px">
+  <!-- panel A: frozen -->
+  <text x="118" y="24" text-anchor="middle" class="svN">TRAIN &#8594; DEPLOY</text>
+  <rect x="30" y="44" width="70" height="46" rx="6" class="svBlkLt"></rect>
+  <text x="65" y="63" text-anchor="middle" class="svN" style="letter-spacing:0">offline</text>
+  <text x="65" y="78" text-anchor="middle" class="svN" style="letter-spacing:0">data</text>
+  <line x1="100" y1="67" x2="132" y2="67" class="svArr" marker-end="url(#ah-gray)"></line>
+  <rect x="136" y="44" width="70" height="46" rx="6" class="svBlk"></rect>
+  <text x="171" y="72" text-anchor="middle" class="svLs">train</text>
+  <line x1="171" y1="90" x2="171" y2="128" class="svArr" marker-end="url(#ah-gray)"></line>
+  <rect x="76" y="132" width="128" height="88" rx="0" class="svBox"></rect>
+  <rect x="96" y="150" width="88" height="30" rx="6" class="svBlk"></rect>
+  <text x="140" y="169" text-anchor="middle" class="svLs">policy &#960;<tspan baseline-shift="sub" font-size="9">&#952;</tspan></text>
+  <text x="140" y="204" text-anchor="middle" class="svLs" fill="#6f6a62">&#952; frozen</text>
+  <text x="140" y="248" text-anchor="middle" class="svL">frozen</text>
+  <text x="140" y="268" text-anchor="middle" class="svN" style="letter-spacing:0.02em">shift accumulates</text>
+
+  <!-- panel B: adaptation -->
+  <text x="380" y="24" text-anchor="middle" class="svN">TEST-TIME ADAPTATION</text>
+  <rect x="316" y="82" width="128" height="118" class="svBox"></rect>
+  <rect x="336" y="100" width="88" height="30" rx="6" class="svBlk"></rect>
+  <text x="380" y="119" text-anchor="middle" class="svLs">policy &#960;<tspan baseline-shift="sub" font-size="9">&#952;&#8242;</tspan></text>
+  <rect x="336" y="152" width="88" height="30" rx="6" class="svCoralSoft"></rect>
+  <text x="380" y="171" text-anchor="middle" class="svLs">&#916;&#952; small</text>
+  <path d="M 424 167 C 466 167 466 115 424 115" fill="none" stroke="#ef8677" stroke-width="2" marker-end="url(#ah-coral)"></path>
+  <path d="M 336 115 C 294 115 294 167 336 167" fill="none" stroke="#9a968f" stroke-width="1.8" marker-end="url(#ah-gray)"></path>
+  <text x="287" y="145" text-anchor="middle" class="svN" style="letter-spacing:0.02em">obs</text>
+  <text x="474" y="145" text-anchor="middle" class="svN" style="letter-spacing:0.02em">update</text>
+  <text x="380" y="248" text-anchor="middle" class="svL">adaptation</text>
+  <text x="380" y="268" text-anchor="middle" class="svN" style="letter-spacing:0.02em">tracks change &#183; self-supervised</text>
+
+  <!-- panel C: improvement engine -->
+  <text x="628" y="24" text-anchor="middle" class="svN">IMPROVEMENT ENGINE</text>
+  <rect x="560" y="58" width="136" height="52" class="svBox"></rect>
+  <rect x="576" y="70" width="104" height="28" rx="6" class="svBlk"></rect>
+  <text x="628" y="88" text-anchor="middle" class="svLs">robot &#960;<tspan baseline-shift="sub" font-size="9">k</tspan></text>
+  <line x1="696" y1="84" x2="726" y2="84" class="svArr"></line>
+  <path d="M 726 84 L 726 148 L 706 148" class="svArr" marker-end="url(#ah-gray)"></path>
+  <rect x="642" y="134" width="64" height="28" rx="6" class="svBlkLt"></rect>
+  <text x="674" y="152" text-anchor="middle" class="svN" style="letter-spacing:0.02em">logs</text>
+  <line x1="642" y1="148" x2="612" y2="148" class="svArr" marker-end="url(#ah-gray)"></line>
+  <path d="M 588 134 L 566 148 L 588 162 L 610 148 Z" class="svAmber"></path>
+  <text x="622" y="184" text-anchor="middle" class="svN" style="letter-spacing:0.02em;fill:#b07c22">verify</text>
+  <line x1="566" y1="148" x2="536" y2="148" class="svArr" marker-end="url(#ah-gray)"></line>
+  <rect x="500" y="134" width="34" height="28" rx="6" class="svTealSoft"></rect>
+  <text x="517" y="152" text-anchor="middle" class="svN" style="letter-spacing:0;fill:#2e7f8a">sim</text>
+  <path d="M 517 134 L 517 84 L 556 84" class="svArr" marker-end="url(#ah-gray)"></path>
+  <rect x="484" y="196" width="100" height="26" rx="6" class="svCoralSoft"></rect>
+  <text x="534" y="213" text-anchor="middle" class="svLs">retrain &#8594; &#960;<tspan baseline-shift="sub" font-size="9">k+1</tspan></text>
+  <path d="M 588 162 L 588 209 L 584 209" class="svArr"></path>
+  <path d="M 517 196 L 517 166" class="svArr" marker-end="url(#ah-gray)"></path>
+  <text x="628" y="248" text-anchor="middle" class="svL">improvement</text>
+  <text x="628" y="268" text-anchor="middle" class="svN" style="letter-spacing:0.02em">monotone gains &#183; needs verifier</text>
+</svg>
+</div>
+<figcaption><span class="figno">Fig. 1.</span> Three regimes of learning after training. Left: the standard train-then-freeze deployment; distribution shift accumulates unanswered. Middle: test-time adaptation closes a small, cheap loop from the robot&rsquo;s own observations to a bounded parameter update. Right: an improvement engine closes the big loop — experience flows through verification and retraining back into the deployed policy. RSI is a property of the big loop improving itself.</figcaption>
+</figure>
+
+<p>The essay runs from the ML end toward the robotics end: first the vocabulary and the TTA toolbox as the vision community built it, then what robots were already doing under other names, then why the robot setting breaks the toolbox&rsquo;s assumptions, and finally the systems that are starting to close the full loop — with the practitioners&rsquo; arguments threaded through where they sharpen the picture.</p>
+
+<nav class="toc" aria-label="Table of contents">
+  <div class="toc-title">Table of Contents</div>
+  <ol>
+    <li><a href="#names">Many Names for One Idea</a></li>
+    <li><a href="#toolbox">The Test-Time Adaptation Toolbox</a>
+      <ol>
+        <li><a href="#sfda">Source-free domain adaptation</a></li>
+        <li><a href="#ttba">Test-time training, one instance at a time</a></li>
+        <li><a href="#otta">Online test-time adaptation</a></li>
+        <li><a href="#ttpa">Prior adaptation, briefly</a></li>
+        <li><a href="#tttarch">Test-time training as an architecture</a></li>
+        <li><a href="#pitfalls">What survives contact with practice</a></li>
+      </ol>
+    </li>
+    <li><a href="#lineage">The Robotics Lineage</a>
+      <ol>
+        <li><a href="#adaptivecontrol">Adaptive control, the elder sibling</a></li>
+        <li><a href="#sysid">Online system identification and rapid motor adaptation</a></li>
+        <li><a href="#perception">TTA is already on your robot&rsquo;s perception stack</a></li>
+        <li><a href="#policytta">Policy-level test-time adaptation</a></li>
+      </ol>
+    </li>
+    <li><a href="#breaks">What Breaks on a Robot</a></li>
+    <li><a href="#verifier">Adaptation vs. Improvement: The Verifier Bottleneck</a></li>
+    <li><a href="#wild">Self-Improvement in the Wild</a>
+      <ol>
+        <li><a href="#onerobot">One robot, one task: deployment-time RL</a></li>
+        <li><a href="#fleet">Fleets and foundation models</a></li>
+        <li><a href="#ttc">Test-time compute without weight updates</a></li>
+      </ol>
+    </li>
+    <li><a href="#field">Notes from the Field</a></li>
+    <li><a href="#ladder">The Ladder to RSI</a></li>
+    <li><a href="#open">Open Problems</a></li>
+    <li><a href="#citation">Citation</a></li>
+    <li><a href="#references">References</a></li>
+  </ol>
+</nav>
+
+<h2 id="names">1. Many Names for One Idea</h2>
+
+<p>Every community that has touched this problem has renamed it. Domain adaptation, source-free adaptation, test-time training, online adaptation, continual learning, online RL, lifelong learning, adaptive control — the underlying question is always <em>what may change after training, using what data, under what constraints</em>. Before the toolbox, it&rsquo;s worth pinning the vocabulary down once, because the differences that look pedantic on a slide are exactly the ones that decide whether a method survives on hardware.</p>
+
+<p>Setup: a model <em class="m">f<sub>&theta;</sub></em> (a perception module, or a policy <em class="m">&pi;<sub>&theta;</sub></em>) is trained on source data <em class="m">D<sub>s</sub></em> drawn from <em class="m">P<sub>s</sub></em>. At deployment it faces a target distribution <em class="m">P<sub>t</sub> &ne; P<sub>s</sub></em>. The survey of <a href="https://arxiv.org/abs/2303.15361">Liang et al. (2024)</a> — whose <a href="https://github.com/tim-learn/awesome-test-time-adaptation">companion bibliography</a> I&rsquo;ll lean on throughout — carves the space by <em>what target data the learner sees, and when</em>. I&rsquo;ll use the repository&rsquo;s labels (the paper itself calls the first setting <em>test-time domain adaptation</em>, noting it is elsewhere termed source-free domain adaptation):</p>
+
+<figure class="fig">
+<div class="fig-scroll">
+<svg viewBox="0 0 760 342" role="img" aria-label="Taxonomy of test-time adaptation: SFDA, TTBA, OTTA, TTPA" style="min-width:660px">
+  <rect x="255" y="14" width="250" height="40" class="svBox" rx="0"></rect>
+  <text x="380" y="39" text-anchor="middle" class="svL">adaptation after training</text>
+  <path d="M 380 54 L 380 74 M 104 74 L 656 74 M 104 74 L 104 94 M 288 74 L 288 94 M 472 74 L 472 94 M 656 74 L 656 94" fill="none" stroke="#9a968f" stroke-width="1.6"></path>
+
+  <!-- SFDA card -->
+  <rect x="24" y="94" width="160" height="216" class="svBox"></rect>
+  <text x="104" y="120" text-anchor="middle" class="svT">SFDA</text>
+  <text x="104" y="139" text-anchor="middle" class="svN" style="letter-spacing:0.02em">source-free DA</text>
+  <rect x="44" y="152" width="26" height="34" rx="4" class="svTealSoft"></rect>
+  <rect x="76" y="152" width="26" height="34" rx="4" class="svTealSoft"></rect>
+  <rect x="108" y="152" width="26" height="34" rx="4" class="svTealSoft"></rect>
+  <rect x="140" y="152" width="26" height="34" rx="4" class="svTealSoft"></rect>
+  <text x="104" y="205" text-anchor="middle" class="svN" style="letter-spacing:0">whole unlabeled target</text>
+  <text x="104" y="219" text-anchor="middle" class="svN" style="letter-spacing:0">set, offline, no source</text>
+  <text x="104" y="245" text-anchor="middle" class="svLs" fill="#2e7f8a">SHOT &#183; NRC &#183; AaD</text>
+  <text x="104" y="276" text-anchor="middle" class="svN" style="letter-spacing:0">robot analog:</text>
+  <text x="104" y="290" text-anchor="middle" class="svN" style="letter-spacing:0">overnight recalibration</text>
+
+  <!-- TTBA card -->
+  <rect x="208" y="94" width="160" height="216" class="svBox"></rect>
+  <text x="288" y="120" text-anchor="middle" class="svT">TTBA</text>
+  <text x="288" y="139" text-anchor="middle" class="svN" style="letter-spacing:0.02em">batch / instance</text>
+  <rect x="275" y="152" width="26" height="34" rx="4" class="svCoralSoft"></rect>
+  <text x="288" y="205" text-anchor="middle" class="svN" style="letter-spacing:0">one sample or batch,</text>
+  <text x="288" y="219" text-anchor="middle" class="svN" style="letter-spacing:0">then reset weights</text>
+  <text x="288" y="245" text-anchor="middle" class="svLs" fill="#c2564a">TTT &#183; MEMO &#183; TTT-MAE</text>
+  <text x="288" y="276" text-anchor="middle" class="svN" style="letter-spacing:0">robot analog:</text>
+  <text x="288" y="290" text-anchor="middle" class="svN" style="letter-spacing:0">per-grasp refinement</text>
+
+  <!-- OTTA card -->
+  <rect x="392" y="94" width="160" height="216" class="svBox"></rect>
+  <text x="472" y="120" text-anchor="middle" class="svT">OTTA</text>
+  <text x="472" y="139" text-anchor="middle" class="svN" style="letter-spacing:0.02em">online stream</text>
+  <rect x="412" y="152" width="20" height="34" rx="4" class="svCoralSoft"></rect>
+  <rect x="437" y="152" width="20" height="34" rx="4" class="svCoralSoft"></rect>
+  <rect x="462" y="152" width="20" height="34" rx="4" class="svCoral"></rect>
+  <rect x="487" y="152" width="20" height="34" rx="4" class="svBlkLt"></rect>
+  <rect x="512" y="152" width="20" height="34" rx="4" class="svBlkLt"></rect>
+  <text x="472" y="205" text-anchor="middle" class="svN" style="letter-spacing:0">sequential stream,</text>
+  <text x="472" y="219" text-anchor="middle" class="svN" style="letter-spacing:0">updates persist</text>
+  <text x="472" y="239" text-anchor="middle" class="svLs" fill="#c2564a">Tent &#183; CoTTA</text>
+  <text x="472" y="256" text-anchor="middle" class="svLs" fill="#c2564a">EATA &#183; SAR</text>
+  <text x="472" y="276" text-anchor="middle" class="svN" style="letter-spacing:0">robot analog:</text>
+  <text x="472" y="290" text-anchor="middle" class="svN" style="letter-spacing:0">drift tracking on shift</text>
+
+  <!-- TTPA card -->
+  <rect x="576" y="94" width="160" height="216" class="svBox"></rect>
+  <text x="656" y="120" text-anchor="middle" class="svT">TTPA</text>
+  <text x="656" y="139" text-anchor="middle" class="svN" style="letter-spacing:0.02em">prior shift</text>
+  <rect x="612" y="176" width="14" height="10" rx="2" class="svLilacSoft"></rect>
+  <rect x="630" y="166" width="14" height="20" rx="2" class="svLilac"></rect>
+  <rect x="648" y="156" width="14" height="30" rx="2" class="svLilacSoft"></rect>
+  <rect x="666" y="170" width="14" height="16" rx="2" class="svLilacSoft"></rect>
+  <text x="656" y="205" text-anchor="middle" class="svN" style="letter-spacing:0">p(y) changes, p(x|y)</text>
+  <text x="656" y="219" text-anchor="middle" class="svN" style="letter-spacing:0">stays; reweight outputs</text>
+  <text x="656" y="245" text-anchor="middle" class="svLs" fill="#7a5cad">EM priors &#183; BBSE</text>
+  <text x="656" y="276" text-anchor="middle" class="svN" style="letter-spacing:0">robot analog:</text>
+  <text x="656" y="290" text-anchor="middle" class="svN" style="letter-spacing:0">new site, new objects</text>
+</svg>
+</div>
+<figcaption><span class="figno">Fig. 2.</span> The four settings of the test-time adaptation literature, following the taxonomy of <a href="https://arxiv.org/abs/2303.15361">Liang et al. (2024)</a>, each with its canonical methods and the nearest robotics situation. The axes that matter: how much target data is visible at once, whether updates persist, and whether you ever see the source data again.</figcaption>
+</figure>
+
+<div class="tbl-scroll">
+<table class="tbl">
+  <thead>
+    <tr><th>Setting</th><th>Target data seen</th><th>Updates persist?</th><th>Signal</th><th>Robot situation it matches</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><span class="name">Fine-tuning</span></td><td>labeled target set</td><td>yes</td><td>labels</td><td>you got to collect &amp; annotate at the site</td></tr>
+    <tr><td><span class="name">SFDA</span></td><td>full unlabeled target set, offline</td><td>yes</td><td>self-supervised</td><td>overnight adaptation between shifts</td></tr>
+    <tr><td><span class="name">TTBA</span></td><td>one instance / batch</td><td>no (reset after)</td><td>self-supervised</td><td>optimize for <em>this</em> grasp, this scan</td></tr>
+    <tr><td><span class="name">OTTA</span></td><td>stream, one pass</td><td>yes (accumulate)</td><td>self-supervised</td><td>continuous drift: lighting, wear, weather</td></tr>
+    <tr><td><span class="name">TTPA</span></td><td>stream or set</td><td>output layer only</td><td>self-supervised</td><td>same skills, different object frequencies</td></tr>
+    <tr><td><span class="name">Online RL</span></td><td>own rollouts</td><td>yes</td><td><strong>reward / verifier</strong></td><td>practice makes better, not just current</td></tr>
+    <tr><td><span class="name">Lifelong learning</span></td><td>task sequence</td><td>yes</td><td>labels / reward</td><td>new skills without forgetting old ones</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>Two distinctions in this table do most of the work in the rest of the post. First, <strong>the signal column</strong>. Everything above the Online RL row runs on signals of <em>difference</em> — entropy, consistency, reconstruction error, prediction disagreement — which are free but can only tell the model that the world has changed, not whether the model&rsquo;s response to the change is any good. Improvement, in the sense of Fig. 1, requires a signal of <em>better</em>: a reward, a success detector, a human. The entire economics of self-improving robots lives in how expensive that second kind of signal is.</p>
+
+<p>Second, <strong>persistence</strong>. TTBA-style methods adapt to an instance and throw the adaptation away; OTTA methods accumulate. Accumulation is what you want on a robot whose world drifts slowly — and it is also what makes error accumulation, forgetting, and collapse possible. A robot fleet has a third option no benchmark models: consolidate accumulated adaptations <em>off-robot</em> and redeploy — which is where adaptation quietly turns into the improvement engine.</p>
+
+<p>One more piece of vocabulary. In the LLM world, &ldquo;test-time&rdquo; now more often refers to <strong>test-time compute</strong> — spending more inference (sampling, search, longer chains of thought) without touching weights. Robotics inherited both meanings at once, and Section <a href="#ttc">6.3</a> will argue they are converging: sampling-plus-verifier methods and gradient-based test-time training are two prices for the same good, paid in different currencies (latency vs. plasticity).</p>
+
+<h2 id="toolbox">2. The Test-Time Adaptation Toolbox</h2>
+
+<p>This section is the guided tour of the four families, with an eye on what each one assumes — because Section <a href="#breaks">4</a> is going to be about how robots violate those assumptions. If you already live in this literature, skim to <a href="#tttarch">&sect;2.5</a>, which is where it gets architecturally interesting.</p>
+
+<h3 id="sfda">2.1 Source-free domain adaptation</h3>
+
+<p>The SFDA setting: you have a trained model and the whole unlabeled target dataset, offline, but the source data is gone (privacy, size, contract). The founding method, <strong>SHOT</strong> (<a href="https://arxiv.org/abs/2002.08546">Liang et al., 2020</a>), froze the source classifier head — treating it as a fixed <em>hypothesis</em> of how features map to labels — and adapted only the feature encoder so that target features fit that hypothesis, via information maximization (confident predictions per sample, diverse predictions across samples) plus self-supervised pseudo-labeling. Hundreds of successors refined the pseudo-labeling, exploited local feature geometry (neighborhood clustering in NRC, attracting-and-dispersing in AaD), or distilled into new architectures (DINE). The family&rsquo;s trajectory since 2023 mirrors everything else in vision: from ResNets on Office-Home toward adapting CLIP-class vision-language models, where the &ldquo;source model&rdquo; is a foundation model you definitely cannot retrain.</p>
+
+<p>For a roboticist, SFDA is the <em>between-shifts</em> tool: the fleet uploads a day of unlabeled logs, you adapt the perception stack overnight, you redeploy in the morning. Nothing about it is per-decision or real-time; its assumptions (a big static batch of target data that represents the deployment distribution) are the mildest in the family, which is why the applied sections of the bibliography — LiDAR segmentation, driving detectors, medical imaging — lean so heavily on it.</p>
+
+<h3 id="ttba">2.2 Test-time training, one instance at a time</h3>
+
+<p>The sharper idea, and the one that named the field, is <strong>test-time training</strong> (<a href="https://arxiv.org/abs/1909.13231">Sun et al., 2020</a>): turn a <em>single unlabeled test input</em> into its own little learning problem. Train the network with two heads sharing a feature encoder — a main task head and a self-supervised head (originally four-way rotation prediction). At test time, take a few gradient steps on the self-supervised loss <em>for this specific input</em>, updating the shared encoder, then predict:</p>
+
+<div class="eq"><em class="m">&theta;<sub>e</sub>&prime; = &theta;<sub>e</sub> &minus; &eta; &nabla;<sub>&theta;<sub>e</sub></sub> &#8466;<sub>ssl</sub>(x; &theta;<sub>e</sub>) ,&nbsp;&nbsp;&nbsp; &ycirc; = h(f(x; &theta;<sub>e</sub>&prime;))</em></div>
+
+<p>The gamble is that the self-supervised loss and the main loss have correlated gradients — that getting better at predicting rotations of <em>this image</em> also means seeing <em>this image</em> more clearly. <strong>TTT-MAE</strong> (<a href="https://arxiv.org/abs/2209.07522">Gandelsman et al., 2022</a>) upgraded the auxiliary task to masked autoencoding (20 gradient steps per input, then reset), with large gains on the hard distribution-shift suites: ImageNet-A accuracy 15.3% &rarr; 21.3%, ImageNet-R 31.3% &rarr; 38.9%. <strong>MEMO</strong> (<a href="https://arxiv.org/abs/2110.09506">Zhang et al., 2022</a>) showed you can skip the auxiliary head entirely: minimize the entropy of the prediction averaged over augmentations of the single input. The common thread is <em>episodic</em> adaptation — weights reset after every instance, so nothing can accumulate: no drift, no forgetting, no compounding, and also no learning in any cumulative sense.</p>
+
+<figure class="fig">
+<div class="fig-scroll">
+<svg viewBox="0 0 760 320" role="img" aria-label="TTT Y-architecture and TTT-layer recurrence" style="min-width:660px">
+  <!-- panel a: Y architecture -->
+  <text x="30" y="26" class="svN">(A) TEST-TIME TRAINING &#8212; SUN ET AL. 2020</text>
+  <rect x="30" y="130" width="56" height="40" rx="6" class="svBlkLt"></rect>
+  <text x="58" y="155" text-anchor="middle" class="svLs">x</text>
+  <line x1="86" y1="150" x2="120" y2="150" class="svArr" marker-end="url(#ah-gray)"></line>
+  <rect x="124" y="122" width="96" height="56" rx="6" class="svBlk"></rect>
+  <text x="172" y="147" text-anchor="middle" class="svLs">encoder</text>
+  <text x="172" y="165" text-anchor="middle" class="svLs">f(&#183;; &#952;<tspan baseline-shift="sub" font-size="9">e</tspan>)</text>
+  <path d="M 220 138 C 252 128 258 110 274 100" fill="none" class="svArr" marker-end="url(#ah-gray)"></path>
+  <path d="M 220 162 C 252 172 258 190 274 200" fill="none" class="svArr" marker-end="url(#ah-gray)"></path>
+  <rect x="278" y="76" width="88" height="42" rx="6" class="svTealSoft"></rect>
+  <text x="322" y="94" text-anchor="middle" class="svLs">main head</text>
+  <text x="322" y="110" text-anchor="middle" class="svLs">h &#8594; &ycirc;</text>
+  <rect x="278" y="182" width="88" height="42" rx="6" class="svCoralSoft"></rect>
+  <text x="322" y="200" text-anchor="middle" class="svLs">SSL head</text>
+  <text x="322" y="216" text-anchor="middle" class="svLs">g &#8594; &#8466;<tspan baseline-shift="sub" font-size="9">ssl</tspan></text>
+  <path d="M 278 214 C 210 262 150 230 166 182" fill="none" stroke="#ef8677" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#ah-coral)"></path>
+  <text x="212" y="262" text-anchor="middle" class="svN" style="letter-spacing:0.02em;fill:#c2564a">&#8722;&eta;&#8711;&#8466;<tspan baseline-shift="sub" font-size="8">ssl</tspan> at test time</text>
+  <text x="196" y="300" text-anchor="middle" class="svN" style="letter-spacing:0.02em">no labels needed &#183; reset per instance</text>
+
+  <!-- divider -->
+  <line x1="420" y1="30" x2="420" y2="300" stroke="#e4e1db" stroke-width="1.5"></line>
+
+  <!-- panel b: TTT layer -->
+  <text x="450" y="26" class="svN">(B) TTT AS A LAYER &#8212; SUN ET AL. 2024</text>
+  <g>
+    <rect x="450" y="130" width="34" height="34" rx="5" class="svBlkLt"></rect>
+    <text x="467" y="152" text-anchor="middle" class="svLs">x<tspan baseline-shift="sub" font-size="9">1</tspan></text>
+    <rect x="492" y="130" width="34" height="34" rx="5" class="svBlkLt"></rect>
+    <text x="509" y="152" text-anchor="middle" class="svLs">x<tspan baseline-shift="sub" font-size="9">2</tspan></text>
+    <rect x="534" y="130" width="34" height="34" rx="5" class="svCoralSoft"></rect>
+    <text x="551" y="152" text-anchor="middle" class="svLs">x<tspan baseline-shift="sub" font-size="9">t</tspan></text>
+  </g>
+  <line x1="551" y1="130" x2="551" y2="106" class="svArr" marker-end="url(#ah-gray)"></line>
+  <rect x="586" y="60" width="150" height="72" rx="0" class="svBox"></rect>
+  <text x="661" y="86" text-anchor="middle" class="svLs">hidden state =</text>
+  <text x="661" y="104" text-anchor="middle" class="svLs">weights W<tspan baseline-shift="sub" font-size="9">t</tspan></text>
+  <path d="M 736 80 C 758 84 758 112 736 114" fill="none" stroke="#ef8677" stroke-width="2" marker-end="url(#ah-coral)"></path>
+  <line x1="568" y1="147" x2="582" y2="120" class="svArr" marker-end="url(#ah-gray)"></line>
+  <text x="643" y="176" class="svLs" text-anchor="middle">W<tspan baseline-shift="sub" font-size="9">t</tspan> = W<tspan baseline-shift="sub" font-size="9">t&#8722;1</tspan> &#8722; &eta;&#8711;&#8467;(W<tspan baseline-shift="sub" font-size="9">t&#8722;1</tspan>; x<tspan baseline-shift="sub" font-size="9">t</tspan>)</text>
+  <text x="643" y="198" class="svLs" text-anchor="middle">z<tspan baseline-shift="sub" font-size="9">t</tspan> = f(x<tspan baseline-shift="sub" font-size="9">t</tspan>; W<tspan baseline-shift="sub" font-size="9">t</tspan>)</text>
+  <text x="643" y="240" text-anchor="middle" class="svN" style="letter-spacing:0.02em">every forward pass is a</text>
+  <text x="643" y="254" text-anchor="middle" class="svN" style="letter-spacing:0.02em">step of gradient descent</text>
+  <text x="590" y="298" text-anchor="middle" class="svN" style="letter-spacing:0.02em">update rule runs at train AND test time</text>
+</svg>
+</div>
+<figcaption><span class="figno">Fig. 3.</span> Two generations of test-time training. (A) The original Y-shaped architecture: a self-supervised head shares the encoder with the main task; at test time only the self-supervised loss is available, and its gradient updates the shared encoder. (B) The 2024 reincarnation as a sequence-modeling layer: the layer&rsquo;s hidden state <em>is</em> the weights of an inner model, updated by one self-supervised gradient step per token. What was a robustness trick became an architecture.</figcaption>
+</figure>
+
+<h3 id="otta">2.3 Online test-time adaptation</h3>
+
+<p>OTTA is the setting robots actually inhabit: data arrives as a stream, you adapt as you go, and the updates persist. The founding method here is <strong>Tent</strong> (<a href="https://arxiv.org/abs/2006.10726">Wang et al., 2021</a>), which is almost embarrassingly simple: as each test batch arrives, re-estimate normalization statistics on it, and take a gradient step to minimize the entropy of the model&rsquo;s own predictions — updating <em>only</em> the batch-norm scale and shift parameters <em class="m">&gamma;, &beta;</em>:</p>
+
+<div class="eq"><em class="m">min<sub>{&gamma;,&beta;}</sub> &nbsp;&#120124;<sub>x</sub> H(f<sub>&theta;</sub>(x)) ,&nbsp;&nbsp;&nbsp; H(p) = &minus;&Sigma;<sub>c</sub> p<sub>c</sub> log p<sub>c</sub></em></div>
+
+<p>Confidence as a training signal, on ~0.1% of the parameters. It cut ImageNet-C error from 50.2% (the previous best, a trained method) to 44.0%, online, without labels. It is also, and this matters enormously for us, <strong>a positive feedback loop on the model&rsquo;s own beliefs</strong> — and left running on a long or unlucky stream it can collapse: predictions drift toward one confident class, entropy goes to zero, accuracy goes with it. The practitioners at my dinner had met this failure mode in a different costume — &ldquo;<em>sometimes we just ask a little bit and it becomes flat</em>&rdquo; was one description of RL post-training collapsing a policy&rsquo;s diversity — and I want to flag now that these are structurally the same disease: optimizing a model against its own outputs without an external anchor.</p>
+
+<p>Most of the OTTA literature since 2022 is a taxonomy of anchors:</p>
+
+<ul>
+  <li><strong>CoTTA</strong> (<a href="https://arxiv.org/abs/2203.13591">Wang et al., 2022</a>) — for <em>continually changing</em> targets: pseudo-labels come from a weight-averaged teacher (an EMA of the student) with augmentation averaging, and every iteration a random ~1% of weights are <em>stochastically restored</em> to their source values, so the source model is never fully forgotten. On the continual CIFAR-100-C protocol, plain Tent collapses below the unadapted baseline (60.9% vs. 46.4% error) while CoTTA reaches 32.5% — the gap between adaptation with and without an anchor.</li>
+  <li><strong>EATA</strong> (<a href="https://arxiv.org/abs/2204.02610">Niu et al., 2022</a>) — not every sample deserves a gradient. Filter out high-entropy (unreliable) and redundant samples — roughly half the backward passes vanish — and add a Fisher-information penalty anchoring parameters that mattered in-distribution.</li>
+  <li><strong>SAR</strong> (<a href="https://arxiv.org/abs/2302.12400">Niu et al., 2023</a>) — took the &ldquo;wild&rdquo; conditions seriously: mixed shifts, batch size 1, imbalanced label streams. Batch norm itself is the destabilizer (statistics estimated from one robot frame are garbage); group/layer norm survives; filter the noisy-gradient samples and seek flat minima via sharpness-aware updates. Works at batch size 1 — the robot&rsquo;s batch size.</li>
+  <li><strong>NOTE</strong> (<a href="https://arxiv.org/abs/2208.05117">Gong et al., 2022</a>) and <strong>RoTTA</strong> (<a href="https://arxiv.org/abs/2303.13899">Yuan et al., 2023</a>) — attack temporal correlation head-on: a robot&rsquo;s stream is not i.i.d.; consecutive frames share content, so naive statistics and balanced-class assumptions break. Both maintain a small memory bank resampled toward i.i.d.-ness (instance-aware normalization in NOTE; category-balanced, timeliness-weighted sampling in RoTTA) and adapt against that bank instead of the raw stream.</li>
+</ul>
+
+<figure class="fig">
+<div class="fig-scroll">
+<svg viewBox="0 0 760 344" role="img" aria-label="Online TTA on a stream, with the collapse failure mode and its anchors" style="min-width:660px">
+  <text x="30" y="26" class="svN">STREAM (NON-IID: SHIFT ARRIVES MID-DEPLOYMENT)</text>
+  <g>
+    <rect x="30" y="42" width="44" height="34" rx="5" class="svBlkLt"></rect>
+    <rect x="82" y="42" width="44" height="34" rx="5" class="svBlkLt"></rect>
+    <rect x="134" y="42" width="44" height="34" rx="5" class="svBlkLt"></rect>
+    <rect x="186" y="42" width="44" height="34" rx="5" class="svAmberSoft"></rect>
+    <rect x="238" y="42" width="44" height="34" rx="5" class="svAmberSoft"></rect>
+    <rect x="290" y="42" width="44" height="34" rx="5" class="svAmber"></rect>
+    <text x="342" y="65" class="svL">&#8230;</text>
+  </g>
+  <text x="102" y="98" text-anchor="middle" class="svN" style="letter-spacing:0.02em">sunny</text>
+  <text x="260" y="98" text-anchor="middle" class="svN" style="letter-spacing:0.02em">dusk / rain / wear</text>
+  <line x1="312" y1="76" x2="312" y2="122" class="svArr" marker-end="url(#ah-gray)"></line>
+
+  <rect x="196" y="126" width="232" height="96" rx="0" class="svBox"></rect>
+  <text x="312" y="150" text-anchor="middle" class="svLs">model f<tspan baseline-shift="sub" font-size="9">&#952;</tspan></text>
+  <g>
+    <rect x="222" y="166" width="16" height="24" rx="3" class="svBlk"></rect>
+    <rect x="244" y="166" width="16" height="24" rx="3" class="svCoral"></rect>
+    <rect x="266" y="166" width="16" height="24" rx="3" class="svBlk"></rect>
+    <rect x="288" y="166" width="16" height="24" rx="3" class="svCoral"></rect>
+    <rect x="310" y="166" width="16" height="24" rx="3" class="svBlk"></rect>
+    <rect x="332" y="166" width="16" height="24" rx="3" class="svBlk"></rect>
+    <rect x="354" y="166" width="16" height="24" rx="3" class="svCoral"></rect>
+    <rect x="376" y="166" width="16" height="24" rx="3" class="svBlk"></rect>
+  </g>
+  <text x="312" y="210" text-anchor="middle" class="svN" style="letter-spacing:0.02em">only norm-layer &gamma;,&beta; update</text>
+  <path d="M 428 174 C 470 174 470 130 428 138" fill="none" stroke="#ef8677" stroke-width="2" marker-end="url(#ah-coral)"></path>
+  <text x="492" y="158" class="svLs" fill="#c2564a">min H(&ycirc;)</text>
+
+  <path d="M 424 218 C 456 228 468 236 480 248" fill="none" stroke="#ef8677" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#ah-coral)"></path>
+  <text x="428" y="268" text-anchor="middle" class="svN" style="letter-spacing:0.02em;fill:#c2564a">if unanchored</text>
+
+  <!-- collapse panel -->
+  <rect x="486" y="196" width="250" height="118" rx="8" class="svCream"></rect>
+  <text x="611" y="220" text-anchor="middle" class="svN" style="letter-spacing:0.1em;fill:#b07c22">COLLAPSE</text>
+  <g>
+    <rect x="516" y="264" width="18" height="26" class="svBlk"></rect>
+    <rect x="540" y="272" width="18" height="18" class="svBlk"></rect>
+    <rect x="564" y="258" width="18" height="32" class="svBlk"></rect>
+    <rect x="588" y="268" width="18" height="22" class="svBlk"></rect>
+    <text x="566" y="306" text-anchor="middle" class="svN" style="letter-spacing:0">t = 0</text>
+  </g>
+  <g>
+    <rect x="648" y="240" width="18" height="50" class="svCoral"></rect>
+    <rect x="672" y="286" width="18" height="4" class="svBlk"></rect>
+    <rect x="696" y="286" width="18" height="4" class="svBlk"></rect>
+    <text x="678" y="306" text-anchor="middle" class="svN" style="letter-spacing:0">t &#8594; &#8734;</text>
+  </g>
+  <text x="611" y="238" text-anchor="middle" class="svN" style="letter-spacing:0;fill:#8a6516">entropy&#8594;0, one class wins</text>
+
+  <text x="30" y="254" class="svN" style="letter-spacing:0.02em">ANCHORS:</text>
+  <text x="30" y="274" class="svLs" style="font-size:11px">&#183; filter unreliable samples (EATA, SAR)</text>
+  <text x="30" y="292" class="svLs" style="font-size:11px">&#183; EMA teacher + restore 1% (CoTTA)</text>
+  <text x="30" y="310" class="svLs" style="font-size:11px">&#183; iid-ify via memory bank (NOTE, RoTTA)</text>
+  <text x="30" y="328" class="svLs" style="font-size:11px">&#183; flat minima (SAR)</text>
+</svg>
+</div>
+<figcaption><span class="figno">Fig. 4.</span> Online TTA in one picture. A stream shifts mid-deployment; Tent-style methods re-estimate normalization statistics and nudge only the norm-layer affine parameters to minimize prediction entropy. Left unanchored, self-confidence training collapses (cream panel: the prediction histogram degenerates). The successful OTTA literature is essentially a catalog of anchors — sample filters, teacher averaging, stochastic restoration, memory banks — against exactly this failure.</figcaption>
+</figure>
+
+<h3 id="ttpa">2.4 Prior adaptation, briefly</h3>
+
+<p>The smallest family, TTPA, handles label shift: the classes appear at different frequencies at deployment while class-conditionals stay put. The classic fix predates deep learning — <a href="https://doi.org/10.1162/089976602753284446">Saerens et al. (2002)</a> re-estimate the target priors with EM and reweight the softmax outputs; BBSE (<a href="https://arxiv.org/abs/1802.03916">Lipton et al., 2018</a>) does it with confusion matrices. It sounds boring until your warehouse robot moves from the toy aisle to the hardware aisle and every &ldquo;most likely object&rdquo; prior it has is wrong. Cheap, output-level, and criminally underused in robotics relative to how often the situation occurs.</p>
+
+<h3 id="tttarch">2.5 Test-time training as an architecture</h3>
+
+<p>The most consequential turn in this literature happened when test-time training stopped being a patch and became a <em>layer</em>. <a href="https://arxiv.org/abs/2407.04620">Sun et al. (2024)</a> proposed sequence layers whose hidden state is itself a small model — linear, or a two-layer MLP — and whose state transition is <em>one step of self-supervised gradient descent on the current token</em> (Fig. 3B). The recurrence <em class="m">W<sub>t</sub> = W<sub>t&minus;1</sub> &minus; &eta;&nabla;&#8467;(W<sub>t&minus;1</sub>; x<sub>t</sub>)</em> compresses everything seen so far into weights, in linear time; unlike Mamba-class RNNs, perplexity keeps improving past 16k tokens of context. This is not as exotic as it looks: <a href="https://arxiv.org/abs/2102.11174">Schlag et al. (2021)</a> showed linear attention is formally a <em>fast weight programmer</em> in the sense of <a href="https://ieeexplore.ieee.org/document/6796337">Schmidhuber (1992)</a> — attention already writes to a weight-like memory; TTT layers just upgrade the write rule from a fixed outer product to an explicit learning step. <strong>Titans</strong> (<a href="https://arxiv.org/abs/2501.00663">Behrouz et al., 2024</a>) pushed the same idea with a surprise-gated, momentum-carrying, forgetting-equipped memory trained at test time, scaling past 2M-token contexts; a TTT-augmented diffusion transformer generated <a href="https://arxiv.org/abs/2504.05298">coherent one-minute videos</a> from storyboards (CVPR 2025).</p>
+
+<p>Why this matters for robots: it dissolves the boundary the rest of this post is organized around. In a TTT-layer policy there is no separate &ldquo;adaptation algorithm&rdquo; bolted on at deployment — <em>inference is learning</em>, by construction, and what gets meta-learned in training is the learning rule itself. The 2026 crop of robot policies built this way (<a href="#ttc">&sect;6.3</a>) compresses thousands of timesteps of a deployment&rsquo;s history into fast weights, which is recognizably the same move RMA made with a latent vector in 2021 — just with the latent upgraded to a full set of weights.</p>
+
+<h3 id="pitfalls">2.6 What survives contact with practice</h3>
+
+<p>An honest reading of this literature has to include its pathologies, because they transfer to robots with interest. Three stand out. First, <strong>hyperparameter fragility</strong>: TTA methods are typically tuned on the test distribution they report on — a luxury no deployment has; benchmark studies that forbid this (e.g., <a href="https://arxiv.org/abs/2306.02929">Zhao et al., 2023</a>) find rankings scramble and gains shrink. Second, <strong>batch dependence</strong>: many published gains quietly assume batch 64 of i.i.d. corrupted images; at batch size 1 on a temporally-correlated stream — the robot case — several methods are worse than doing nothing (SAR&rsquo;s core observation). Third, <strong>lifetime</strong>: most evaluations run minutes of adaptation. When <a href="https://arxiv.org/abs/2306.05401">Press et al. (2023)</a> stretched the continual protocol to arbitrarily long corruption streams, every method they tested eventually collapsed — and a baseline called <em>RDumb</em>, which simply resets the model to its pretrained weights on a fixed cadence and adapts naively in between, beat the entire field. A periodic lobotomy outperforming five years of accumulated cleverness is the single most instructive result in this literature. None of this makes the toolbox useless; it makes the toolbox <em>a set of components that must be wrapped in guardrails</em> — which, we&rsquo;ll see, is exactly how the successful robot systems use learning-during-deployment: filtered, gated, anchored, and supervised by something that can say no.</p>
+
+<h2 id="lineage">3. The Robotics Lineage</h2>
+
+<p>Reading the TTA literature as a roboticist produces a persistent sense of d&eacute;j&agrave; vu, and the feeling is justified: robotics has been doing test-time adaptation, under other names and with stronger guarantees, since before most of the TTA authors were born. It is worth tracing this lineage explicitly, because the design patterns it converged on — few adapted parameters, invariant representations, guarantees on the update — are exactly the ones the deep-learning methods keep rediscovering.</p>
+
+<h3 id="adaptivecontrol">3.1 Adaptive control, the elder sibling</h3>
+
+<p>The MIT rule for adjusting an autopilot&rsquo;s gain online dates to 1958; <a href="https://www.sciencedirect.com/science/article/abs/pii/0005109873900737">&Aring;str&ouml;m &amp; Wittenmark&rsquo;s self-tuning regulators (1973)</a> made online parameter estimation plus certainty-equivalent control a rigorous discipline; model-reference adaptive control and later &#8466;<sub>1</sub>-adaptive control added the thing the deep TTA literature conspicuously lacks: <strong>stability proofs for the adaptation loop itself</strong>. The classical recipe is instantly recognizable in modern clothes — estimate a low-dimensional parameter vector from recent input-output history, condition the controller on it, and bound how fast the estimate may move. The price of the guarantees was expressiveness: the model class was linear-ish and the parameter vector small.</p>
+
+<p>The modern synthesis of the two traditions is <strong>Neural-Fly</strong> (<a href="https://arxiv.org/abs/2205.06908">O&rsquo;Connell et al., <em>Science Robotics</em> 2022</a>): meta-learn (offline, from just 12 minutes of flight data) a wind-invariant basis for aerodynamic residual forces, then at test time adapt <em>only a vector of linear mixing coefficients</em> over that basis, with a composite adaptation law carrying exponential-stability guarantees. A drone flying figure-eights in 43.6&nbsp;km/h wind, tracking with centimeter-scale error, beating an &#8466;<sub>1</sub> controller by 42% — using what a vision researcher would call &ldquo;last-layer test-time adaptation on a meta-learned representation.&rdquo; The division of labor is the lesson: <em>representation learned offline where data is plentiful and stakes are low; adaptation confined to a small, fast, provably-bounded subspace at deployment</em>. Tent updating only <em class="m">&gamma;, &beta;</em> is the same instinct without the proofs.</p>
+
+<h3 id="sysid">3.2 Online system identification and rapid motor adaptation</h3>
+
+<p>The learning-based branch of this family estimates <em>latent environment parameters</em> instead of model coefficients. <strong>UP-OSI</strong> (<a href="https://arxiv.org/abs/1702.02453">Yu et al., RSS 2017</a>) trained a universal policy conditioned on dynamics parameters <em class="m">&mu;</em> alongside an online system identification network regressing <em class="m">&mu;</em> from recent state-action history — and found, strikingly, that the pair could outperform the universal policy <em>given the true parameters</em> outside the training range. <strong>RMA</strong> (<a href="https://arxiv.org/abs/2107.04034">Kumar et al., RSS 2021</a>) scaled the same architecture to real legged locomotion (Fig. 5): in simulation, a privileged encoder <em class="m">&mu;(e)</em> compresses ground-truth environment factors (friction, payload, terrain) into an extrinsics vector <em class="m">z</em>; an adaptation module <em class="m">&phi;</em> is then trained by supervised regression to reproduce <em class="m">&#7825;</em> from the last ~half-second of proprioceptive history alone. On the robot, <em class="m">&phi;</em> runs asynchronously at 10&nbsp;Hz under a 100&nbsp;Hz base policy, and the A1 walks off a 15&nbsp;cm step-down, over oily plastic, sand, and mattresses, carrying payloads up to its own body weight — zero fine-tuning, zero weight updates. The trick transferred wholesale to dexterity: <a href="https://arxiv.org/abs/2210.04887">Qi et al. (2022)</a> rotate unseen objects in-hand with the same proprioception-history &rarr; extrinsics estimation.</p>
+
+<p>Call this <strong>adaptation by inference</strong>: nothing about the network changes at test time; adaptation is an amortized computation the network was trained to perform. Its sibling, <strong>adaptation by optimization</strong>, actually updates weights online: <a href="https://arxiv.org/abs/1803.11347">Nagabandi et al. (2019)</a> meta-trained a dynamics model (via MAML, or a learned recurrent update) so that one gradient step on the last few seconds of experience re-fits it to the local regime — a real hexapod re-planning within seconds of losing a leg. The dichotomy is worth keeping because it reappears at every scale: RMA vs. Nagabandi in 2019&ndash;21, in-context adaptation vs. TTT-layers in 2024&ndash;26. Inference-style adaptation is fast, bounded, and can only express what training anticipated; optimization-style adaptation is slower, riskier, and open-ended. Robots need both, at different timescales — and the TTT-layer construction of &sect;2.5 is interesting precisely because it collapses the dichotomy: the optimization <em>is</em> the inference.</p>
+
+<figure class="fig">
+<div class="fig-scroll">
+<svg viewBox="0 0 760 328" role="img" aria-label="RMA architecture: privileged extrinsics encoding in simulation, online estimation from history at deployment" style="min-width:660px">
+  <!-- sim panel -->
+  <rect x="22" y="34" width="340" height="252" rx="8" class="svTealSoft" opacity="0.45"></rect>
+  <text x="40" y="24" class="svN">IN SIMULATION (PRIVILEGED)</text>
+  <rect x="40" y="56" width="128" height="66" rx="6" fill="#ffffff" stroke="#4fb3bf" stroke-width="1.6"></rect>
+  <text x="104" y="76" text-anchor="middle" class="svN" style="letter-spacing:0">env factors e</text>
+  <text x="104" y="93" text-anchor="middle" class="svLs" style="font-size:10.5px">friction &#183; payload</text>
+  <text x="104" y="108" text-anchor="middle" class="svLs" style="font-size:10.5px">terrain &#183; wear</text>
+  <line x1="164" y1="89" x2="196" y2="89" class="svArr" marker-end="url(#ah-gray)"></line>
+  <rect x="200" y="70" width="64" height="38" rx="6" class="svBlk"></rect>
+  <text x="232" y="94" text-anchor="middle" class="svLs">&mu;(e)</text>
+  <line x1="264" y1="89" x2="296" y2="89" class="svArr" marker-end="url(#ah-gray)"></line>
+  <rect x="300" y="70" width="42" height="38" rx="6" class="svTeal"></rect>
+  <text x="321" y="94" text-anchor="middle" class="svLs" fill="#ffffff">z</text>
+  <rect x="44" y="180" width="298" height="72" rx="6" class="svBox"></rect>
+  <text x="193" y="208" text-anchor="middle" class="svLs">base policy &pi;(x<tspan baseline-shift="sub" font-size="9">t</tspan>, a<tspan baseline-shift="sub" font-size="9">t&#8722;1</tspan>, z)</text>
+  <text x="193" y="230" text-anchor="middle" class="svN" style="letter-spacing:0.02em">trained with RL, conditioned on z</text>
+  <path d="M 321 108 L 321 148 L 260 176" fill="none" class="svArr" marker-end="url(#ah-gray)"></path>
+
+  <!-- deploy panel -->
+  <rect x="398" y="34" width="340" height="252" rx="8" class="svCoralSoft" opacity="0.5"></rect>
+  <text x="416" y="24" class="svN">ON THE ROBOT (NO WEIGHT UPDATES)</text>
+  <g>
+    <rect x="420" y="62" width="26" height="26" rx="4" class="svBlkLt"></rect>
+    <rect x="452" y="62" width="26" height="26" rx="4" class="svBlkLt"></rect>
+    <rect x="484" y="62" width="26" height="26" rx="4" class="svBlkLt"></rect>
+    <rect x="516" y="62" width="26" height="26" rx="4" class="svBlkLt"></rect>
+    <rect x="548" y="62" width="26" height="26" rx="4" class="svBlk"></rect>
+  </g>
+  <text x="497" y="108" text-anchor="middle" class="svN" style="letter-spacing:0.02em">proprio history (x, a)<tspan baseline-shift="sub" font-size="8">t&#8722;k:t</tspan></text>
+  <line x1="497" y1="116" x2="497" y2="138" class="svArr" marker-end="url(#ah-gray)"></line>
+  <rect x="440" y="142" width="114" height="38" rx="6" class="svBlk"></rect>
+  <text x="497" y="166" text-anchor="middle" class="svLs">adapter &phi;</text>
+  <line x1="554" y1="161" x2="600" y2="161" class="svArr" marker-end="url(#ah-coral)"></line>
+  <rect x="604" y="142" width="42" height="38" rx="6" class="svCoral"></rect>
+  <text x="625" y="166" text-anchor="middle" class="svLs" fill="#ffffff">&#7825;</text>
+  <text x="672" y="150" class="svN" style="letter-spacing:0">10 Hz</text>
+  <text x="672" y="164" class="svN" style="letter-spacing:0">async</text>
+  <rect x="420" y="210" width="298" height="48" rx="6" class="svBox"></rect>
+  <text x="569" y="232" text-anchor="middle" class="svLs">&pi;(x<tspan baseline-shift="sub" font-size="9">t</tspan>, a<tspan baseline-shift="sub" font-size="9">t&#8722;1</tspan>, &#7825;)&nbsp;&nbsp;@ 100 Hz</text>
+  <text x="569" y="250" text-anchor="middle" class="svN" style="letter-spacing:0.02em">walks on sand, oil, 12 kg payload &#8212; zero-shot</text>
+  <path d="M 625 180 L 625 206" class="svArr" marker-end="url(#ah-gray)"></path>
+
+  <!-- bridge -->
+  <path d="M 232 108 C 232 148 340 128 436 148" fill="none" stroke="#9a968f" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ah-gray)"></path>
+  <text x="190" y="160" text-anchor="middle" class="svN" style="letter-spacing:0">&phi; trained to imitate &mu;: &#8214;&#7825; &#8722; z&#8214;&sup2;</text>
+
+  <text x="380" y="312" text-anchor="middle" class="svN" style="letter-spacing:0.04em">ADAPTATION BY INFERENCE: SYSTEM ID AMORTIZED INTO A FORWARD PASS</text>
+</svg>
+</div>
+<figcaption><span class="figno">Fig. 5.</span> Rapid Motor Adaptation (<a href="https://arxiv.org/abs/2107.04034">Kumar et al., 2021</a>). In simulation, a privileged encoder compresses true environment factors into an extrinsics vector <em class="m">z</em> that conditions the base policy; an adaptation module <em class="m">&phi;</em> learns to estimate <em class="m">&#7825;</em> from proprioceptive history alone. On hardware, <em class="m">&phi;</em> is the entire adaptation mechanism — continuous, sub-second, and requiring no gradient at test time. Compare with Fig.&nbsp;3B: TTT layers make the same move with the latent upgraded to a full weight matrix.</figcaption>
+</figure>
+
+<h3 id="perception">3.3 TTA is already on your robot&rsquo;s perception stack</h3>
+
+<p>If you go looking for robots in the TTA bibliography — I did; across the four files the robot-adjacent entries number well over a hundred — you find them concentrated almost entirely in perception, and earlier than you&rsquo;d expect. The earliest OTTA entry that isn&rsquo;t video segmentation is <strong>robotic kitting</strong>: ONDA (<a href="https://arxiv.org/abs/1807.01028">Mancini et al., IROS 2018</a>) adapted batch-norm statistics online so a picker could handle novel parts — three years before Tent formalized the recipe on ImageNet-C. <a href="https://arxiv.org/abs/1810.05424">Tonioni et al. (CVPR 2019)</a> ran <em>continuous online backprop</em> on a stereo network during driving, using photometric reprojection as the free label — ~25&nbsp;FPS with modular partial updates (~15&nbsp;FPS adapting the full network), with D1 error collapsing from ~40&ndash;50% under synthetic-only weights to single digits as the car drives. By now the applied sections of the bibliography read like a robotics stack diagram: online LiDAR segmentation (GIPSO, ECCV 2022; D3CTTA, CVPR 2025), category-level object pose (TTA-COPE, CVPR 2023; TTAPose, RA-L 2025), 6D pose tracking, depth completion (ProxyTTA, CVPR 2024; ETA, ICCV 2025), monocular depth at ICRA, trajectory prediction via masked-autoencoder TTT (<a href="https://arxiv.org/abs/2403.10052">T4P, CVPR 2024</a>), vision-and-language navigation (<a href="https://openreview.net/forum?id=Zos5wsaB5r">FSTTA, ICML 2024</a>), even certifiable test-time self-supervision for satellite pose at IROS.</p>
+
+<p>Why did perception adapt first? Because <strong>perception on a robot carries its own supervision</strong>. The signals these systems exploit form a tidy taxonomy that classification benchmarks simply don&rsquo;t have: <em>geometric consistency</em> (left-right photometric error in stereo, reprojection residuals), <em>temporal consistency</em> (tracked points must persist), <em>cross-modal agreement</em> (LiDAR votes for camera pixels), and — my favorite, from TALoS (<a href="https://arxiv.org/abs/2410.15674">Jang et al., NeurIPS 2024</a>) — <em>the future verifying the past</em>: a scene-completion module&rsquo;s prediction about occluded space is checked against what the sensor actually observes moments later along the line of sight, and the discrepancy becomes a training signal. A robot moving through the world is a machine for generating these delayed self-labels. Nothing in ImageNet-C prepares you for how much free signal deployment actually contains.</p>
+
+<h3 id="policytta">3.4 Policy-level test-time adaptation</h3>
+
+<p>The policy-side story is thinner, and the thinness is informative. The canonical entry is <strong>PAD</strong> (<a href="https://arxiv.org/abs/2007.04309">Hansen et al., ICLR 2021</a>): take a visuomotor RL policy, attach an inverse-dynamics head (predict the action between two consecutive observations) sharing the visual encoder, and keep training that head&rsquo;s objective during deployment — TTT for control, with Yu Sun on the author list to make the lineage literal. It improved generalization in 31 of 36 shifted environments and lifted a real-robot pushing task from 64% to 88% under a cloth-textured background. Successors are scattered rather than systematic: MoVie (view-generalization adaptation for model-based policies), MixTBN (BN-mixing for visual RL manipulation), DROP (conservative TTA for offline policy optimization, NeurIPS 2023), DFA (<a href="https://arxiv.org/abs/2307.06333">ICML 2023</a> — a human diagnoses the policy&rsquo;s confusion at test time and supplies targeted feedback), PAFF (re-labeling one&rsquo;s own rollouts with a foundation model&rsquo;s hindsight descriptions). By my count something like a fifth of the instance-adaptation bibliography is robot-adjacent, but almost none of it appeared at robotics venues, and until late 2025 none of it touched the policies roboticists actually deploy.</p>
+
+<p>The structural reason for the thinness: a policy&rsquo;s cheap signals are weaker than perception&rsquo;s. Inverse dynamics (PAD&rsquo;s objective) tells the encoder to remain <em>action-relevant</em>, but no self-supervised objective can tell a policy that a different action would have been <em>better</em> — grasp success is not a photometric residual. This is the signal-of-difference vs. signal-of-better line from &sect;1 showing up as a hard constraint, and it is exactly where adaptation stops and improvement has to begin.</p>
+
+<h2 id="breaks">4. What Breaks on a Robot</h2>
+
+<p>Suppose you take the toolbox of Section 2 at face value and wire Tent, or TTT-MAE, or CoTTA into a deployed manipulation system. Here is the audit of what you implicitly assumed, and what the robot does to each assumption.</p>
+
+<figure class="fig">
+<div class="fig-scroll">
+<svg viewBox="0 0 760 424" role="img" aria-label="Six assumptions of TTA benchmarks versus robot reality" style="min-width:660px">
+  <text x="252" y="26" text-anchor="middle" class="svN">ON THE BENCHMARK</text>
+  <text x="592" y="26" text-anchor="middle" class="svN">ON THE ROBOT</text>
+  <line x1="422" y1="38" x2="422" y2="410" stroke="#e4e1db" stroke-width="1.5"></line>
+  <!-- row template: y0 = 40 + i*62 -->
+  <!-- row 1: exogenous shift -->
+  <text x="30" y="62" class="svLs" style="font-weight:700">shift source</text>
+  <rect x="152" y="44" width="252" height="46" rx="7" class="svTealSoft"></rect>
+  <text x="278" y="63" text-anchor="middle" class="svLs" style="font-size:11px">weather happens to you</text>
+  <text x="278" y="80" text-anchor="middle" class="svN" style="letter-spacing:0">exogenous corruption</text>
+  <rect x="452" y="44" width="286" height="46" rx="7" class="svCoralSoft"></rect>
+  <text x="595" y="63" text-anchor="middle" class="svLs" style="font-size:11px">your actions write tomorrow&#8217;s test set</text>
+  <text x="595" y="80" text-anchor="middle" class="svN" style="letter-spacing:0">closed loop: data &#8764; P<tspan baseline-shift="sub" font-size="8">&pi;</tspan></text>
+  <!-- row 2: iid batches -->
+  <text x="30" y="124" class="svLs" style="font-weight:700">data arrival</text>
+  <rect x="152" y="106" width="252" height="46" rx="7" class="svTealSoft"></rect>
+  <text x="278" y="125" text-anchor="middle" class="svLs" style="font-size:11px">shuffled batch of 64</text>
+  <text x="278" y="142" text-anchor="middle" class="svN" style="letter-spacing:0">i.i.d. within batch</text>
+  <rect x="452" y="106" width="286" height="46" rx="7" class="svCoralSoft"></rect>
+  <text x="595" y="125" text-anchor="middle" class="svLs" style="font-size:11px">batch of 1, forever, autocorrelated</text>
+  <text x="595" y="142" text-anchor="middle" class="svN" style="letter-spacing:0">30 min staring at the same bin</text>
+  <!-- row 3: cost of errors -->
+  <text x="30" y="186" class="svLs" style="font-weight:700">error cost</text>
+  <rect x="152" y="168" width="252" height="46" rx="7" class="svTealSoft"></rect>
+  <text x="278" y="187" text-anchor="middle" class="svLs" style="font-size:11px">a number goes down</text>
+  <text x="278" y="204" text-anchor="middle" class="svN" style="letter-spacing:0">accuracy on a spreadsheet</text>
+  <rect x="452" y="168" width="286" height="46" rx="7" class="svCoralSoft"></rect>
+  <text x="595" y="187" text-anchor="middle" class="svLs" style="font-size:11px">a wrist breaks, a person flinches</text>
+  <text x="595" y="204" text-anchor="middle" class="svN" style="letter-spacing:0">adaptation transients are physical</text>
+  <!-- row 4: compute -->
+  <text x="30" y="248" class="svLs" style="font-weight:700">compute</text>
+  <rect x="152" y="230" width="252" height="46" rx="7" class="svTealSoft"></rect>
+  <text x="278" y="249" text-anchor="middle" class="svLs" style="font-size:11px">A100, offline, no deadline</text>
+  <text x="278" y="266" text-anchor="middle" class="svN" style="letter-spacing:0">backprop is free</text>
+  <rect x="452" y="230" width="286" height="46" rx="7" class="svCoralSoft"></rect>
+  <text x="595" y="249" text-anchor="middle" class="svLs" style="font-size:11px">edge GPU shared with a 50 Hz loop</text>
+  <text x="595" y="266" text-anchor="middle" class="svN" style="letter-spacing:0">slow adaptation = stale adaptation</text>
+  <!-- row 5: lifetime -->
+  <text x="30" y="310" class="svLs" style="font-weight:700">lifetime</text>
+  <rect x="152" y="292" width="252" height="46" rx="7" class="svTealSoft"></rect>
+  <text x="278" y="311" text-anchor="middle" class="svLs" style="font-size:11px">stream ends after 50k images</text>
+  <text x="278" y="328" text-anchor="middle" class="svN" style="letter-spacing:0">then you reset for free</text>
+  <rect x="452" y="292" width="286" height="46" rx="7" class="svCoralSoft"></rect>
+  <text x="595" y="311" text-anchor="middle" class="svLs" style="font-size:11px">months of drift, wear, seasons</text>
+  <text x="595" y="328" text-anchor="middle" class="svN" style="letter-spacing:0">collapse has time to find you</text>
+  <!-- row 6: units -->
+  <text x="30" y="372" class="svLs" style="font-weight:700">population</text>
+  <rect x="152" y="354" width="252" height="46" rx="7" class="svTealSoft"></rect>
+  <text x="278" y="373" text-anchor="middle" class="svLs" style="font-size:11px">one model, one test set</text>
+  <text x="278" y="390" text-anchor="middle" class="svN" style="letter-spacing:0">adaptation is private</text>
+  <rect x="452" y="354" width="286" height="46" rx="7" class="svCoralSoft"></rect>
+  <text x="595" y="373" text-anchor="middle" class="svLs" style="font-size:11px">a fleet diverging unit by unit</text>
+  <text x="595" y="390" text-anchor="middle" class="svN" style="letter-spacing:0">what merges back? what forgets?</text>
+</svg>
+</div>
+<figcaption><span class="figno">Fig. 6.</span> The assumption audit. Each row is something the TTA literature&rsquo;s evaluation protocol takes for granted and a robot deployment does not provide. None of these is fatal individually; jointly they explain why so little of the benchmark toolbox has shipped on real robots unmodified.</figcaption>
+</figure>
+
+<p>Three of these rows deserve elaboration beyond the figure. The first is the <strong>closed loop</strong>. TTA theory is built on covariate shift: <em class="m">p(x)</em> moves, <em class="m">p(y|x)</em> stays put, and crucially the test distribution doesn&rsquo;t care what the model does. A robot&rsquo;s observation stream is generated by its own policy — change the policy (which is what adaptation does) and you change the distribution mid-adaptation. This is the same mechanism behind compounding errors in imitation learning (<a href="https://arxiv.org/abs/1011.0686">Ross et al., 2011</a>): small deviations carry the robot into states its training never covered, where its errors are larger, which carries it further out. An online adapter sits <em>inside</em> this feedback loop. It can damp the spiral — adaptation pulls the model toward competence in the states the policy actually visits — or amplify it: a perception module that adapts to confidently misread the anomalous states the policy is drifting through is manufacturing its own distribution shift. Which regime you get depends on update rate, anchoring, and luck, and almost nothing in the literature analyzes it, because the benchmarks are open-loop by construction.</p>
+
+<p>The second is <strong>safety during the transient</strong>. A frozen policy&rsquo;s failure modes can be characterized before deployment; an adapting policy&rsquo;s cannot, by definition. Robotics has an answer-shaped tool here — runtime assurance and control barrier functions, the pattern where a learned controller operates inside an envelope enforced by a verified supervisor — and Neural-Fly&rsquo;s bounded-adaptation-law design shows what it looks like to build the envelope into the adapter itself. What does not exist yet is the marriage: TTA methods whose worst-case behavior during adaptation is certifiable. Until it does, every deployed robot-learning system I know of takes the same pragmatic route: adapt <em>off-policy and off-robot</em> (collect on the robot, update in the cloud, gate the redeploy), or adapt on-robot only in output-space and latent-space ways that cannot reach the actuators unfiltered.</p>
+
+<p>The third is the <strong>fleet</strong> row, which is secretly the most important for where this post is heading. Per-unit online adaptation and fleet-level learning are different operations with different failure modes: the first tracks (this gripper&rsquo;s worn tendon, this store&rsquo;s lighting), the second improves (all units get better at opening freezer doors). A fleet gives you something no TTA benchmark has — <em>parallel experience under controlled diversity</em> — and it converts the forgetting problem from a curiosity into an accounting question: which locally-adapted deltas are noise to discard, which are site-specific state to persist locally, and which are discoveries to consolidate into the next base model? Jessy Lin&rsquo;s <a href="https://jessylin.com/2025/10/20/continual-learning/">framing of continual learning</a> as generalization <em>plus</em> integration — with sparse, targeted parameter updates (memory-layer finetuning) as the mechanism that learns without trampling what&rsquo;s already known — reads to me like the right shape of answer for exactly this consolidation step, though nobody has run it at fleet scale on robots yet.</p>
+
+<h2 id="verifier">5. Adaptation vs. Improvement: The Verifier Bottleneck</h2>
+
+<p>Here is the load-bearing distinction of this essay, stated once with notation and then never again. Write the whole learning system — policy, data engine, evaluators — as an operator that maps the current policy to the next one:</p>
+
+<div class="eq"><em class="m">&pi;<sub>k+1</sub> = T(&pi;<sub>k</sub>) = U&thinsp;(&pi;<sub>k</sub>,&nbsp; V &#8728; R(&pi;<sub>k</sub>),&nbsp; D<sub>k</sub>)</em></div>
+
+<p>where <em class="m">R(&pi;<sub>k</sub>)</em> is the experience the policy generates at deployment, <em class="m">V</em> is whatever judges that experience — a reward, a success detector, a human, a simulator — <em class="m">U</em> is the update, and <em class="m">D<sub>k</sub></em> is the accumulated data estate. <strong>Adaptation</strong> is the regime where <em class="m">V</em> is only a signal of difference (&sect;1) and <em class="m">T</em> can at best track a moving world. <strong>Improvement</strong> is the regime where <em class="m">V</em> carries information about <em>better</em>, and iterating <em class="m">T</em> climbs. <strong>Recursive self-improvement</strong> is the regime where iterating <em class="m">T</em> also improves <em class="m">V</em>, <em class="m">R</em>, or <em class="m">U</em> themselves — the machine sharpening its own whetstone. The rate at which the whole loop compounds is set by its scarcest input, and my central claim — shared, it turned out, by most of the dinner table — is that for robots the scarce input is not data volume, not model capacity, but <strong>trustworthy bits of evaluation</strong>: the number of experience-units per hour that <em class="m">V</em> can label as better/worse without lying.</p>
+
+<blockquote><p>&ldquo;Recently&hellip; the market is not very good at verifying. There are only very high-tech verifiers. But if it&rsquo;s not good to be verified, you should do verification first.&rdquo;<br><span style="font-size:0.85em;color:#6f6a62">— one of the practitioners, on why their RSI roadmap starts with the grader, not the model</span></p></blockquote>
+
+<p>This is the robotics translation of what the LLM world learned with RLVR: reasoning models took off where answers could be checked (math, code), and stalled where they couldn&rsquo;t. <a href="https://storage.googleapis.com/deepmind-media/Era-of-Experience%20/The%20Era%20of%20Experience%20Paper.pdf">Silver &amp; Sutton (2025)</a> call the coming period the &ldquo;era of experience&rdquo; — agents learning predominantly from their own interaction rather than human data — and robotics is simultaneously the best and worst positioned field for it: best, because physical interaction generates consequences that are in principle checkable (the box is either closed or it is not); worst, because most of those consequences are expensive to sense, delayed, or entangled with confounders. What exists in practice is a hierarchy of verifiers, and every deployed system in Section 6 is defined by which rungs it stands on:</p>
+
+<div class="tbl-scroll">
+<table class="tbl">
+  <thead>
+    <tr><th>Verifier</th><th>Example</th><th>Cost / unit</th><th>Failure mode</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><span class="name">Physical / programmatic check</span></td><td>barcode scans; force threshold; part-present sensor; the espresso is in the cup</td><td>~free at runtime</td><td>narrow; only covers what you instrumented</td></tr>
+    <tr><td><span class="name">Learned success detector</span></td><td>HIL-SERL&rsquo;s binary reward classifier; DYNA-1&rsquo;s &ldquo;foundation reward model&rdquo;</td><td>cheap after training</td><td>policy learns to fool it (Goodhart)</td></tr>
+    <tr><td><span class="name">Self-predicted progress</span></td><td>steps-to-go prediction (Self-Improving EFMs); dense progress estimators (EVOLVE-VLA)</td><td>free, dense</td><td>self-referential; inherits the model&rsquo;s own blind spots</td></tr>
+    <tr><td><span class="name">Value / advantage estimate</span></td><td>V-GPS re-ranking; RECAP&rsquo;s advantage conditioning</td><td>cheap after offline RL</td><td>only as good as the data that trained it</td></tr>
+    <tr><td><span class="name">VLM-as-judge</span></td><td>RoboMonkey&rsquo;s action verifier; hindsight relabeling (PAFF)</td><td>moderate, per-query</td><td>plausibility &ne; physical truth</td></tr>
+    <tr><td><span class="name">Simulator replay</span></td><td>sim-first validation gates; digital-twin regression tests</td><td>cheap per trial, dear to build</td><td>verifies the sim&rsquo;s physics, not the world&rsquo;s</td></tr>
+    <tr><td><span class="name">Human</span></td><td>interventions (Sirius, HIL-SERL); teleop corrections (RECAP); annotation</td><td>expensive, ~1&times; realtime</td><td>doesn&rsquo;t scale; inconsistent</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>Two properties of this table drive system design. First, <strong>the cheap rows are corruptible and the incorruptible rows are expensive</strong> — so mature systems stack them: a self-predicted progress signal shapes moment-to-moment learning, a learned classifier gates success counting, spot-checks by humans or physical instrumentation keep the classifier honest. This is defense-in-depth against reward hacking, which is not hypothetical: optimize any policy hard enough against a learned judge and it will find the judge&rsquo;s blind spots (<a href="https://lilianweng.github.io/posts/2024-11-28-reward-hacking/">Weng, 2024</a>). The OTTA collapse of Fig. 4 is the same phenomenon at the bottom of the hierarchy — entropy is the cheapest self-verifier there is, and left alone the model satisfies it by becoming confidently useless.</p>
+
+<p>Second, <strong>human attention occupies a special position</strong>: it is the only verifier that is simultaneously trustworthy, general, and — this is the design trick the best systems exploit — <em>already present in the loop for operational reasons</em>. A safety operator monitoring a deployed robot produces, as exhaust, a stream of labeled data: every intervention marks a state where the policy was about to fail, every non-intervention weakly certifies the surrounding behavior, every teleoperated correction is a demonstration targeted at precisely the current policy&rsquo;s weakest state. Sirius (<a href="https://arxiv.org/abs/2211.08416">Liu et al., RSS 2023</a>) built its deployment-learning loop entirely on this exhaust, re-weighting behavioral cloning by inferred human trust; HIL-SERL and RECAP both consume interventions as first-class training signal. The dinner transcript&rsquo;s most concrete proposal (&sect;7) is essentially a semantic version of the same move: treat demonstrations as ground truth, <em>annotate the divergence</em> between them and the policy&rsquo;s behavior, and feed the diagnosis back — which a control theorist would recognize as error-driven learning and an imitation theorist would recognize as DAgger with a human-readable residual.</p>
+
+<p>One more consequence of taking the operator view seriously, which the transcript flagged and the literature mostly hasn&rsquo;t: <strong>when <em class="m">V</em> changes, your graded data estate silently expires</strong>. Add a new reward term, retrain the success classifier, tighten a tolerance — and every stored rollout&rsquo;s evaluation is stale; the honest move is to re-grade, and where grading requires fresh interaction, to re-roll. (&ldquo;<em>The point is, you need to re-do the rollout&hellip; after the grading is done.</em>&rdquo;) Robot data engines that version their verifiers and track which experience was graded by which <em class="m">V</em> — the way software teams version schemas — are still the exception, and the lack shows up later as unexplainable regressions.</p>
+
+<h2 id="wild">6. Self-Improvement in the Wild</h2>
+
+<p>So who has actually closed the loop, on hardware, and what did it take? I&rsquo;ll organize the evidence by scale — one robot practicing one task, then fleets under foundation models, then the improvement you can buy at inference without touching weights at all — and thread each system onto the operator of &sect;5: what plays <em class="m">R</em>, what plays <em class="m">V</em>, what plays <em class="m">U</em>.</p>
+
+<h3 id="onerobot">6.1 One robot, one task: deployment-time RL</h3>
+
+<p>The existence proofs came fast between 2022 and 2024. <a href="https://arxiv.org/abs/2208.07860">Smith et al. (2022)</a> trained a Unitree A1 to walk <em>from scratch, in the field, in 20 minutes</em> — no simulator — by cranking the update-to-data ratio of an off-policy learner (DroQ) to ~20 gradient steps per environment step. DayDreamer (<a href="https://arxiv.org/abs/2206.14176">Wu et al., 2022</a>) got a quadruped from lying on its back to walking in one reset-free hour by learning a world model on the robot and training the policy in imagination — and when the experimenters started shoving the robot, it adapted to the pushes within 10 minutes, which is OTTA with legs. The algorithmic keystone is RLPD (<a href="https://arxiv.org/abs/2302.02948">Ball et al., 2023</a>): symmetric 50/50 sampling between online replay and a prior-data buffer, LayerNorm on critics to stop value explosion, big ensembles, high UTD — unglamorous choices that make on-robot RL sample-cheap enough to be real.</p>
+
+<p>The system that turned this into a routine is <strong>SERL</strong> and its human-in-the-loop successor <strong>HIL-SERL</strong> (<a href="https://arxiv.org/abs/2401.16013">Luo et al., 2024</a>; <a href="https://arxiv.org/abs/2410.21845">2024/<em>Science Robotics</em> 2025</a>). The recipe maps cleanly onto &sect;5&rsquo;s hierarchy: <em class="m">V</em> is a binary reward classifier trained from a few minutes of labeled success/failure frames, plus a human who intervenes when the policy wanders; <em class="m">R</em> is the robot practicing; <em class="m">U</em> is RLPD. With that stack, policies on tasks that imitation learning genuinely struggles with — timing-belt assembly, RAM insertion, dual-arm dashboard assembly, Jenga whipping — reached <strong>100% success within 1&ndash;2.5 hours of real-world training on nearly all tasks</strong>, roughly 2&times; the success and 1.8&times; the execution speed of imitation baselines (an HG-DAgger baseline averaged 49.7%). FastRLAP (<a href="https://arxiv.org/abs/2304.09831">Stachowicz et al., 2023</a>) showed the autonomous version for driving: one slow demo lap to define checkpoints, auto-resets on collision, and an RC car finds racing lines approaching a human FPV driver within 20 minutes of practicing. And Sirius (<a href="https://arxiv.org/abs/2211.08416">Liu et al., RSS 2023</a>) showed the shared-autonomy version for tasks where free exploration is unacceptable: the robot runs the easy 70&ndash;90%, the human handles the hard states, and intervention-weighted behavioral cloning converts the division of labor into a policy that needs the human less each week (+27% success on real hardware over baselines).</p>
+
+<p>Read as a group: <strong>the loop closes today, in hours not months, wherever a task-specific verifier can be stood up</strong> — a classifier, a lap counter, a human with a joystick. And as of 2025 the same recipe upgrades generalist policies, not just task specialists: <a href="https://arxiv.org/abs/2502.05450">ConRFT (RSS 2025)</a> takes a VLA to 96.3% average success across eight real manipulation tasks with 45&ndash;90 minutes of human-supervised online RL per task (+144% over supervised fine-tuning); <a href="https://arxiv.org/abs/2501.16664">iRe-VLA (ICRA 2025)</a> alternates online RL with supervised distillation to keep large models stable while they improve; <a href="https://arxiv.org/abs/2509.09674">SimpleVLA-RL (2025)</a> shows outcome-reward RL substituting for data outright — from one demonstration per task, LIBERO-Long success goes 17.3%&rarr;91.7%; and <a href="https://arxiv.org/abs/2412.09858">RLDG (2024)</a> runs the pipe in reverse, using RL specialists to <em>generate</em> the data that fine-tunes the generalist (up to 40% better than human-demo fine-tuning). The limits are equally clear: every one of these is one policy or one task list, one cell, with the verifier hand-built per task. The scaling question is whether the verifier and the practice loop themselves can be made general.</p>
+
+<h3 id="fleet">6.2 Fleets and foundation models</h3>
+
+<figure class="fig">
+<div class="fig-scroll">
+<svg viewBox="0 0 760 400" role="img" aria-label="The robot data engine: deploy, experience, verify, credit, update, gate, redeploy, with task proposal and dreamed data as side taps" style="min-width:680px">
+  <!-- deploy -->
+  <text x="89" y="30" text-anchor="middle" class="svN" style="letter-spacing:0">&pi;*0.6 &#183; RoboCat</text>
+  <text x="89" y="46" text-anchor="middle" class="svN" style="letter-spacing:0">HIL-SERL &#183; Sirius</text>
+  <rect x="30" y="60" width="118" height="64" class="svBox"></rect>
+  <rect x="46" y="74" width="86" height="24" rx="5" class="svBlk"></rect>
+  <text x="89" y="90" text-anchor="middle" class="svLs">fleet &pi;<tspan baseline-shift="sub" font-size="9">k</tspan></text>
+  <text x="89" y="114" text-anchor="middle" class="svN" style="letter-spacing:0">DEPLOY</text>
+
+  <line x1="148" y1="92" x2="172" y2="92" class="svArr" marker-end="url(#ah-gray)"></line>
+  <!-- experience -->
+  <rect x="176" y="66" width="140" height="52" rx="7" class="svBlkLt"></rect>
+  <text x="246" y="88" text-anchor="middle" class="svLs" style="font-size:11.5px">experience</text>
+  <text x="246" y="104" text-anchor="middle" class="svN" style="letter-spacing:0">logs &#183; video &#183; teleop</text>
+
+  <line x1="316" y1="92" x2="338" y2="92" class="svArr" marker-end="url(#ah-gray)"></line>
+  <!-- verifier funnel -->
+  <path d="M 328 58 L 468 58 L 440 124 L 356 124 Z" class="svAmberSoft" stroke="#e09a2b" stroke-width="1.6"></path>
+  <text x="398" y="86" text-anchor="middle" class="svLs" style="font-size:11.5px;fill:#8a6516">verify</text>
+  <text x="398" y="104" text-anchor="middle" class="svN" style="letter-spacing:0;fill:#8a6516">the narrow pipe</text>
+
+  <line x1="456" y1="92" x2="466" y2="92" class="svArr" marker-end="url(#ah-amber)"></line>
+  <!-- credit -->
+  <rect x="470" y="66" width="120" height="52" rx="7" class="svBlkLt"></rect>
+  <text x="530" y="88" text-anchor="middle" class="svLs" style="font-size:11.5px">credit &amp; curate</text>
+  <text x="530" y="104" text-anchor="middle" class="svN" style="letter-spacing:0">advantage &#183; filter</text>
+
+  <line x1="590" y1="92" x2="632" y2="92" class="svArr" marker-end="url(#ah-gray)"></line>
+  <!-- update -->
+  <rect x="636" y="66" width="100" height="52" rx="7" class="svCoralSoft"></rect>
+  <text x="686" y="88" text-anchor="middle" class="svLs" style="font-size:11.5px">update</text>
+  <text x="686" y="104" text-anchor="middle" class="svN" style="letter-spacing:0">&pi;<tspan baseline-shift="sub" font-size="8">k</tspan> &#8594; &pi;<tspan baseline-shift="sub" font-size="8">k+1</tspan></text>
+
+  <!-- stage annotations, staggered clear of arrows -->
+  <text x="398" y="146" text-anchor="middle" class="svN" style="letter-spacing:0">steps-to-go &#183; classifier</text>
+  <text x="398" y="160" text-anchor="middle" class="svN" style="letter-spacing:0">interventions</text>
+  <text x="530" y="146" text-anchor="middle" class="svN" style="letter-spacing:0">RECAP advantage</text>
+  <text x="530" y="160" text-anchor="middle" class="svN" style="letter-spacing:0">trust-weighting &#183; filter</text>
+  <text x="680" y="146" text-anchor="middle" class="svN" style="letter-spacing:0">RLPD &#183; RL+BC</text>
+  <text x="680" y="160" text-anchor="middle" class="svN" style="letter-spacing:0">distill to next gen</text>
+
+  <!-- return path through gate -->
+  <path d="M 736 92 L 750 92 L 750 210 L 406 210" fill="none" class="svArr" marker-end="url(#ah-gray)"></path>
+  <rect x="318" y="188" width="84" height="44" rx="7" class="svTealSoft"></rect>
+  <text x="360" y="207" text-anchor="middle" class="svLs" style="font-size:11px;fill:#2e7f8a">gate</text>
+  <text x="360" y="223" text-anchor="middle" class="svN" style="letter-spacing:0;fill:#2e7f8a">sim &#183; canary</text>
+  <path d="M 318 210 L 89 210 L 89 128" fill="none" class="svArr" marker-end="url(#ah-gray)"></path>
+
+  <!-- side taps -->
+  <rect x="196" y="270" width="130" height="46" rx="7" class="svLilacSoft"></rect>
+  <text x="261" y="289" text-anchor="middle" class="svLs" style="font-size:11px;fill:#7a5cad">task proposer</text>
+  <text x="261" y="305" text-anchor="middle" class="svN" style="letter-spacing:0;fill:#7a5cad">LLM curriculum</text>
+  <path d="M 196 293 L 89 293 L 89 216" fill="none" class="svArr" marker-end="url(#ah-gray)"></path>
+
+  <rect x="420" y="270" width="150" height="46" rx="7" class="svLilacSoft"></rect>
+  <text x="495" y="289" text-anchor="middle" class="svLs" style="font-size:11px;fill:#7a5cad">world model</text>
+  <text x="495" y="305" text-anchor="middle" class="svN" style="letter-spacing:0;fill:#7a5cad">dreamed trajectories</text>
+  <path d="M 495 270 L 495 244 L 272 244 L 272 128" fill="none" class="svArr" marker-end="url(#ah-gray)"></path>
+
+  <!-- side-tap annotations -->
+  <text x="261" y="336" text-anchor="middle" class="svN" style="letter-spacing:0">AutoRT &#183; 77k eps &#183; constitution</text>
+  <text x="495" y="336" text-anchor="middle" class="svN" style="letter-spacing:0">DreamGen &#183; 22 novel behaviors</text>
+  <text x="380" y="378" text-anchor="middle" class="svN" style="letter-spacing:0.06em">EVERY ARROW EXISTS IN SOME 2023&#8211;26 SYSTEM; NO SYSTEM YET OWNS ALL OF THEM AT ONCE</text>
+</svg>
+</div>
+<figcaption><span class="figno">Fig. 7.</span> The robot data engine, drawn once with every arc that has been demonstrated somewhere in 2023&ndash;26. Experience flows through verification (deliberately drawn as a funnel — it is the narrow pipe), credit assignment, and a policy update, then through an evaluation gate back to the fleet. Two side taps augment the robot&rsquo;s own experience: LLM task proposers steering collection (AutoRT) and world models dreaming labeled trajectories (DreamGen). Annotations name the systems that implement each stage.</figcaption>
+</figure>
+
+<p><strong>RoboCat</strong> (<a href="https://arxiv.org/abs/2306.11706">Bousmalis et al., 2023</a>) was the first system to run the full Fig.&nbsp;7 loop generation-over-generation: a goal-conditioned decision transformer spanning multiple arms and action spaces; adapting to a new task from 100&ndash;1000 demonstrations; then the fine-tuned agent <em>practices the task ~10,000 times on its own</em>, and the self-generated trajectories join the training set of the next RoboCat generation. Across generations, success on previously-unseen tasks went from 36% to more than double that. <strong>AutoRT</strong> (<a href="https://arxiv.org/abs/2401.12963">Ahn et al., 2024</a>) built out the collection half at fleet scale: a VLM grounds the scene, an LLM proposes tasks and routes each to teleop, script, or policy, and a &ldquo;robot constitution&rdquo; plus classic guardrails (force limits, E-stop, line-of-sight supervision) bounds the autonomy — 77,000 real episodes across 6,650 tasks over seven months, with up to 20 robots running simultaneously. The two halves are complementary and neither is sufficient: RoboCat had the improvement loop but hand-picked tasks; AutoRT had the task engine but wasn&rsquo;t improving the policy with what it collected.</p>
+
+<p>Two 2025 systems closed the halves into production-shaped wholes. <strong>Self-Improving Embodied Foundation Models</strong> (<a href="https://arxiv.org/abs/2509.15155">Seyed Ghasemipour et al., NeurIPS 2025</a>) is the cleanest paper-form statement of the recipe this post has been circling: Stage 1 fine-tunes a pretrained foundation model with behavioral cloning <em>plus a steps-to-go prediction head</em>; Stage 2 turns that head into both a shaped reward and a success detector, and lets a fleet practice autonomously. The exchange rate is the headline: on real-robot LanguageTable, 15% additional <em>self-collected</em> episodes took success from 63% to 87.5%, while <em>quadrupling</em> the imitation dataset moved it to 62% — i.e. nowhere. An hour of verified practice is worth an order of magnitude of passive demonstration, once the model is good enough to practice at all. Meanwhile <strong>&pi;*0.6 with RECAP</strong> (<a href="https://www.pi.website/blog/pistar06">Physical Intelligence, Nov 2025</a>) is the strongest deployment claim to date: offline RL pretraining, SFT with teleoperated corrections, then on-robot RL where a learned value function grades autonomous experience and the policy is <em>conditioned on the advantage</em> — so bad rollouts aren&rsquo;t discarded, they&rsquo;re labeled bad and learned from, and at inference you simply ask for high-advantage behavior. Result: a robot making espresso continuously from 5:30am to 11:30pm, folding 50 novel laundry items in an unseen home, assembling 59 boxes in a real factory — above 90% success, with RECAP more than doubling throughput on the hardest tasks and roughly halving failure rates.</p>
+
+<p>Around these, three variations mark the design space&rsquo;s edges. <strong>Gemini Robotics 1.5</strong> (<a href="https://deepmind.google/blog/gemini-robotics-15-brings-ai-agents-into-the-physical-world/">DeepMind, Sep 2025</a>) invests in the inference side instead: an embodied-reasoning model that plans, calls tools, and hands natural-language subgoals to a VLA that &ldquo;thinks before acting,&rdquo; with an explicit <em>thinking budget</em> — the latency/accuracy knob of LLM test-time compute, installed on a robot — and motion transfer moving skills across embodiments (ALOHA-trained tasks running on the Apollo humanoid) without new data. <strong>DreamGen</strong> (<a href="https://arxiv.org/abs/2505.12705">Jang et al., 2025</a>) replaces the robot&rsquo;s experience with a world model&rsquo;s: fine-tune a video model on the target embodiment, dream photorealistic &ldquo;neural trajectories&rdquo; of novel tasks, recover pseudo-actions with an inverse-dynamics model, and train on the dreams — a humanoid performing 22 behaviors it was never teleoperated on, and NVIDIA reporting 36 hours of synthetic generation standing in for months of human collection. In operator terms, <em class="m">R</em> became a generative model — enormous leverage, and an obvious open question, since a dream is experience that no physical verifier ever checked. And on the industrial floor, the honest current state is <strong>data-engine iteration rather than autonomous self-improvement</strong>: Figure&rsquo;s Helix logistics reports (company numbers) show version-over-version gains — package handling at 4.05s from ~5s, barcode success 88.2%&rarr;94.4% from 60 extra hours of demonstrations — driven by more and better human data through a tight train-deploy-measure cycle; Dyna Robotics&rsquo; DYNA-1 (company claims: 850+ napkins folded over 24 hours at 99.4% with zero interventions) leans on a learned &ldquo;foundation reward model&rdquo; for exactly the &sect;5 reason: unattended operation is only as good as the judge watching it.</p>
+
+<h3 id="ttc">6.3 Test-time compute without weight updates</h3>
+
+<p>The other meaning of &ldquo;test-time&rdquo; arrived in robotics on schedule. If you have a stochastic policy and any verifier from &sect;5&rsquo;s table, you can buy performance at inference: sample several candidate actions, score them, execute the winner. <strong>V-GPS</strong> (<a href="https://arxiv.org/abs/2410.13816">Nakamoto et al., 2024</a>) does this with a value function trained by offline RL — bolted onto five different frozen generalist policies without touching their weights, improving all of them across 12 tasks. <strong>RoboMonkey</strong> (<a href="https://arxiv.org/abs/2506.17811">Kwok et al., 2025</a>) systematized it: sample from the VLA, perturb and majority-vote into an action proposal distribution, pick with a VLM verifier trained on a synthetic preference pipeline — and, the finding that names the paper, action error falls with sample count as a clean power law. An inference-time scaling law for robot policies: +25% on out-of-distribution real-world tasks for a frozen model, paid in FLOPs and latency. <strong>MG-Select</strong> (<a href="https://arxiv.org/abs/2510.05681">Jang et al., 2025</a>) even removes the external verifier: score candidates by KL divergence from a reference distribution produced by the same model with masked inputs — self-consistency as the judge. Add embodied chain-of-thought — <strong>ECoT</strong> (<a href="https://arxiv.org/abs/2407.08693">Zawalski et al., 2024</a>) buys +28% absolute over OpenVLA by reasoning about plans, subtasks, and grounded features before each action — and Gemini&rsquo;s thinking budget, and the robot has the full LLM test-time-compute menu: more samples, more search, more thought.</p>
+
+<figure class="fig">
+<div class="fig-scroll">
+<svg viewBox="0 0 760 380" role="img" aria-label="Quadrant of deployment-time improvement mechanisms: compute vs gradients, transient vs persistent" style="min-width:640px">
+  <line x1="380" y1="40" x2="380" y2="330" stroke="#c9c5be" stroke-width="1.6"></line>
+  <line x1="70" y1="185" x2="690" y2="185" stroke="#c9c5be" stroke-width="1.6"></line>
+  <text x="380" y="26" text-anchor="middle" class="svN">WHAT PERSISTS AFTER THE DECISION?</text>
+  <text x="222" y="52" text-anchor="middle" class="svN" style="letter-spacing:0.06em">NOTHING (TRANSIENT)</text>
+  <text x="540" y="52" text-anchor="middle" class="svN" style="letter-spacing:0.06em">STATE OR WEIGHTS (PERSISTENT)</text>
+  <text x="52" y="120" text-anchor="middle" class="svN" transform="rotate(-90 52 120)" style="letter-spacing:0.05em">EXTRA COMPUTE</text>
+  <text x="52" y="268" text-anchor="middle" class="svN" transform="rotate(-90 52 268)" style="letter-spacing:0.05em">GRADIENT STEPS</text>
+
+  <!-- Q1: compute, transient -->
+  <rect x="88" y="66" width="272" height="104" rx="8" class="svTealSoft" opacity="0.55"></rect>
+  <text x="224" y="90" text-anchor="middle" class="svLs" style="font-weight:700">sample &#183; rank &#183; think</text>
+  <text x="224" y="112" text-anchor="middle" class="svLs" style="font-size:11px">RoboMonkey &#183; V-GPS &#183; MG-Select</text>
+  <text x="224" y="130" text-anchor="middle" class="svLs" style="font-size:11px">ECoT &#183; thinking budgets</text>
+  <text x="224" y="154" text-anchor="middle" class="svN" style="letter-spacing:0">pay in latency, every single step</text>
+
+  <!-- Q2: compute, persistent -->
+  <rect x="400" y="66" width="272" height="104" rx="8" class="svLilacSoft" opacity="0.7"></rect>
+  <text x="536" y="90" text-anchor="middle" class="svLs" style="font-weight:700">in-context &#183; fast weights</text>
+  <text x="536" y="112" text-anchor="middle" class="svLs" style="font-size:11px">RMA extrinsics &#183; RoboTTT layers</text>
+  <text x="536" y="130" text-anchor="middle" class="svLs" style="font-size:11px">retrieval memory &#183; skill libraries</text>
+  <text x="536" y="154" text-anchor="middle" class="svN" style="letter-spacing:0">history compressed into state</text>
+
+  <!-- Q3: gradients, transient -->
+  <rect x="88" y="200" width="272" height="104" rx="8" class="svAmberSoft" opacity="0.7"></rect>
+  <text x="224" y="224" text-anchor="middle" class="svLs" style="font-weight:700">episodic TTT</text>
+  <text x="224" y="246" text-anchor="middle" class="svLs" style="font-size:11px">TTT / TTT-MAE / MEMO &#183; TTT-VLA</text>
+  <text x="224" y="264" text-anchor="middle" class="svLs" style="font-size:11px">latent-prompt tuning &#183; then reset</text>
+  <text x="224" y="288" text-anchor="middle" class="svN" style="letter-spacing:0">optimize for this instance, discard</text>
+
+  <!-- Q4: gradients, persistent -->
+  <rect x="400" y="200" width="272" height="104" rx="8" class="svCoralSoft" opacity="0.8"></rect>
+  <text x="536" y="224" text-anchor="middle" class="svLs" style="font-weight:700">online learning</text>
+  <text x="536" y="246" text-anchor="middle" class="svLs" style="font-size:11px">Tent/CoTTA &#183; PAD &#183; EVOLVE-VLA</text>
+  <text x="536" y="264" text-anchor="middle" class="svLs" style="font-size:11px">TT-VLA &#183; HIL-SERL &#183; RECAP</text>
+  <text x="536" y="288" text-anchor="middle" class="svN" style="letter-spacing:0">pay in risk; gains compound</text>
+
+  <text x="380" y="358" text-anchor="middle" class="svN" style="letter-spacing:0.04em">SAME VERIFIER, DIFFERENT CURRENCY: LATENCY (TOP-LEFT) vs PLASTICITY &amp; RISK (BOTTOM-RIGHT)</text>
+</svg>
+</div>
+<figcaption><span class="figno">Fig. 8.</span> Deployment-time improvement mechanisms sorted by what they spend (inference compute vs. gradient updates) and what persists (nothing vs. state/weights). The interesting migration of 2025&ndash;26 is off the main diagonal: fast-weight architectures (top right) make persistence cheap without full weight updates, and sampling methods (top left) quietly become training methods when their verifier-selected actions are logged as data for the next update — the quadrants feed each other.</figcaption>
+</figure>
+
+<p>And then, in the space of about nine months spanning late 2025 to mid-2026, the gradient-based tradition finally reached VLAs — the bridge this post exists to point at. <strong>EVOLVE-VLA</strong> (<a href="https://arxiv.org/abs/2512.14666">arXiv, Dec 2025</a>) does TTT from environment feedback with a learned dense progress estimator standing in for the oracle reward (echo: steps-to-go), reporting 20.8% success on unseen tasks where pure SFT scores zero. <strong>TT-VLA</strong> (<a href="https://arxiv.org/abs/2601.06748">Jan 2026</a>) runs test-time RL on step-wise progress rewards. <strong>TTT-VLA</strong> (<a href="https://arxiv.org/abs/2606.03127">Jun 2026</a>) confines the adaptation to a <em>latent prompt</em> optimized by a self-supervised proxy task — the Neural-Fly instinct, adapt a small thing on top of a frozen big thing, reinvented for VLAs. <strong>VANE</strong> (<a href="https://arxiv.org/abs/2608.09448">Aug 2026</a>) adds the reliability layer the field will need: candidate updates are sandboxed and <em>committed only when the future visual consequences of executed actions support them</em> — the TALoS signal promoted to a gatekeeper. And <strong>RoboTTT</strong> (<a href="https://arxiv.org/abs/2607.15275">Jul 2026</a>) completes the architectural convergence of &sect;2.5: TTT layers inside a foundation policy, whose fast weights compress up to 8,000 timesteps of deployment history — reporting +87% over a single-step-context baseline and sole completion of a five-minute, ten-stage assembly. None of these has a peer-reviewed venue yet; the cluster is thin, young, and — exactly like the OTTA literature in 2021 — about to find out which of its gains survive hostile evaluation. But the direction of travel is unambiguous: the policy stack is acquiring the same test-time learning machinery the perception stack has run for years, with the same open question — what anchors it.</p>
+
+<h2 id="field">7. Notes from the Field</h2>
+
+<p>Now the dinner. The participants were AI researchers and founders — post-training people, a video-understanding company, robotics people deploying humanoids — and the transcript is noisy in the way real conversation is (some technical terms did not survive transcription; quotes below are lightly cleaned and should be read as paraphrase). What struck me, reading it against the literature above, is how little daylight there is between what the practitioners argue about over food and what the papers quietly encode in their architectures. Here are the positions worth keeping, each mapped to its literature shadow.</p>
+
+<ol>
+  <li><p><strong>Design the data engine before the model.</strong> &ldquo;<em>If I want to run through this RSI, I should design the data engine first&hellip; asynchronous, efficient&hellip; and an observability platform.</em>&rdquo; The claim is that RSI is a systems property, not a model property — you cannot improve what you cannot observe, so instrumentation precedes intelligence. This is Fig.&nbsp;7 stated as an engineering priority, it is why AutoRT is mostly orchestration code, and it is the robotics twin of Weng&rsquo;s argument that the harness around the model deserves co-equal engineering with the model.</p></li>
+
+  <li><p><strong>Design backward from deployed success criteria.</strong> &ldquo;<em>You&rsquo;re starting from the client&rsquo;s end&hellip; what their success criteria are, and then I&rsquo;ll go back and review my eval, my post-training, how to train my model.</em>&rdquo; Choose tasks whose success is crisply checkable, and the verifier problem of &sect;5 shrinks from research to instrumentation. It is not an accident that &pi;*0.6&rsquo;s showcase tasks — espresso made, boxes assembled, laundry folded — all have outcomes a camera or a customer can adjudicate.</p></li>
+
+  <li><p><strong>Verification before scaling</strong> — covered in &sect;5, but the transcript adds a texture the papers don&rsquo;t: a working taxonomy of what&rsquo;s <em>good to verify</em> (&ldquo;it has no overlay in its PDF&hellip; this is very good — objective&rdquo;), a preference for formalization where full programmatic checking isn&rsquo;t reachable, and verifier-agents with tool access (&ldquo;<em>they are all agents&hellip; they can access all the tools, including Linux</em>&rdquo;). The robotics translation of that last idea barely exists yet: verifier-agents that can query the force-torque logs, replay the point cloud, and interrogate the episode the way a human failure analyst would.</p></li>
+
+  <li><p><strong>Imitation must become action-level supervision.</strong> The transcript&rsquo;s Messi bit — you don&rsquo;t learn Messi&rsquo;s game by watching Messi, you need per-action probabilities and a score that drops when <em>your</em> action diverges — is the observation-vs-action gap that haunts every video-pretraining pipeline. Watching assigns no credit to <em>your</em> motor space. The fixes on the table: retargeting human motion into robot kinematics, inverse-dynamics models that pseudo-label video with actions (DreamGen&rsquo;s IDM), and <a href="https://arxiv.org/abs/2412.09858">RLDG</a>&rsquo;s inversion — let RL specialists <em>generate</em> action-level data that imitation then distills, precisely because the resulting actions are optimized rather than merely human.</p></li>
+
+  <li><p><strong>The annotation loop: demonstrations as ground truth, divergence as signal.</strong> The most concrete proposal in the transcript: treat demos or pretraining video as reference, compare the policy&rsquo;s rollout against it, <em>semantically annotate the divergence</em> (&ldquo;automatic semantics&hellip; analyze the difference between it and the ground truth&rdquo;), and feed the diagnosis back into context or training; collect new rollouts; repeat. This is DAgger with a human-readable residual, or PAFF&rsquo;s hindsight relabeling pointed at failures instead of successes — and the participants&rsquo; framing of video-understanding tooling as the <em>infrastructure layer</em> for this loop (their company being &ldquo;similar to 12Labs&rdquo;) is a bet that failure analysis, not data volume, is the scarce skill. Given &sect;5, I think they&rsquo;re right.</p></li>
+
+  <li><p><strong>Credit must reach the step level.</strong> The token-level reward fragment (&ldquo;<em>each token has a private assignment</em>&rdquo;) is transcription-garbled but the intent is legible: outcome-level rewards are too sparse to shape long-horizon behavior, so the field keeps building dense proxies — steps-to-go heads, progress estimators (EVOLVE-VLA, TT-VLA), process reward models over trajectory segments (<a href="https://arxiv.org/abs/2505.18719">VLA-RL</a>), advantage estimates attached to every chunk (RECAP). Robotics is converging on process rewards for the same reason LLM reasoning did: the outcome arrives too late to teach the middle.</p></li>
+
+  <li><p><strong>Respect the optimizer&rsquo;s pathologies.</strong> Three fragments — RL is noisy; over-epoching overfits; aggressive updates make the policy &ldquo;flat&rdquo; — plus the fix the transcript reaches for (&ldquo;<em>re-summon KL</em>&rdquo;: keep the student tethered to a reference distribution). Fig.&nbsp;4&rsquo;s collapse panel is the same disease one level down, and the anchors are the same family: KL-to-reference in RL post-training, EMA teachers and stochastic restore in OTTA, Fisher penalties in EATA, sample filtering in SAR. Everyone who optimizes a model against a cheap signal eventually reinvents the anchor.</p></li>
+
+  <li><p><strong>The representation bottleneck is the honest blocker.</strong> &ldquo;<em>I think we haven&rsquo;t found a good linear representation yet&hellip; it&rsquo;s a scene, a scene, a model, a model — you keep changing the model, changing the machine, changing the scene.</em>&rdquo; Asked which problem is hardest — model, data, data quality — the table landed here: without representations that transfer across scenes and embodiments, every deployment fragments into its own model, and the fleet&rsquo;s experience cannot pool. This is the deepest disagreement with the scaling-optimist reading of &sect;6.2; motion transfer (Gemini Robotics 1.5) and multi-embodiment training (RoboCat, the &pi; models) are the evidence for pooling, the persistent per-site fine-tunes in every real deployment are the evidence against. Unresolved, and load-bearing.</p></li>
+
+  <li><p><strong>Two falsification tests for your flywheel.</strong> The cleanest engineering heuristic of the evening: your approach is working if (a) task loss falls <em>predictably</em> as you add verified data or control capacity — a scaling curve, not an anecdote — and (b) skills transfer beyond the domain they were practiced in. If doubling verified experience doesn&rsquo;t move the curve, your loop is leaking (bad verifier, stale rollouts, collapsed diversity) — instrument until you find the leak. RoboMonkey&rsquo;s inference-scaling power law and the Self-Improving-EFM exchange-rate ablations are exactly these tests, run and published.</p></li>
+
+  <li><p><strong>Bound the authority of the improving system.</strong> The multi-agent fragments — two agents granted the right to collaborate, staffed with sub-agents, checked daily, explicitly <em>not</em> everyone gets rights — read as organizational trivia until you notice it&rsquo;s a safety architecture: the improvement loop runs inside scoped permissions with human review at fixed cadence. The robotics equivalents are AutoRT&rsquo;s constitution plus force limits and line-of-sight rules, staged rollout gates in Fig.&nbsp;7, and adaptation confined to bounded subspaces (&sect;3.1, &sect;4). RSI arriving as a permissioned, audited pipeline is much more plausible — and much more governable — than RSI arriving as an unbounded weight-rewriting daemon.</p></li>
+</ol>
+
+<div class="aside">
+<span class="aside-tag">The loop, as the table converged on it</span>
+Define deployed success criteria &rarr; collect demonstrations and rollouts &rarr; evaluate with objective, programmatic verifiers &rarr; localize failures via semantic annotation and step-level credit &rarr; update the student policy (KL-anchored, carefully dosed) &rarr; re-roll and re-grade when the reward changes &rarr; validate in simulation &rarr; deploy &rarr; observe everything &rarr; repeat. Every stage of it appears somewhere in Sections 2&ndash;6; no published system yet runs all of it unattended — which is a fair one-sentence summary of where the field stands in late 2026.
+</div>
+
+<h2 id="ladder">8. The Ladder to RSI</h2>
+
+<p>Time to assemble the pieces into the claim the title makes. Reading Sections 2&ndash;7 as one progression gives a ladder of capability, where each rung changes <em>what improves</em> and <em>what pays for it</em>:</p>
+
+<figure class="fig">
+<div class="fig-scroll">
+<svg viewBox="0 0 760 420" role="img" aria-label="Five-rung ladder from frozen policies to recursive self-improvement, with systems placed on each rung" style="min-width:680px">
+  <!-- staircase: steps ascending left to right -->
+  <!-- L0 -->
+  <rect x="26" y="330" width="136" height="56" class="svBox"></rect>
+  <text x="94" y="352" text-anchor="middle" class="svT" style="font-size:13px">L0 frozen</text>
+  <text x="94" y="371" text-anchor="middle" class="svN" style="letter-spacing:0">train &#8594; deploy, decay</text>
+  <text x="94" y="404" text-anchor="middle" class="svN" style="letter-spacing:0">most shipped robots</text>
+  <!-- L1 -->
+  <rect x="170" y="262" width="136" height="124" class="svBox"></rect>
+  <rect x="170" y="262" width="136" height="56" class="svLilacSoft" style="stroke:#2b2926;stroke-width:2"></rect>
+  <text x="238" y="284" text-anchor="middle" class="svT" style="font-size:13px">L1 in-context</text>
+  <text x="238" y="303" text-anchor="middle" class="svN" style="letter-spacing:0">adapt by inference</text>
+  <text x="238" y="340" text-anchor="middle" class="svN" style="letter-spacing:0">RMA &#183; Hora &#183; fast</text>
+  <text x="238" y="354" text-anchor="middle" class="svN" style="letter-spacing:0">weights &#183; thinking</text>
+  <!-- L2 -->
+  <rect x="314" y="194" width="136" height="192" class="svBox"></rect>
+  <rect x="314" y="194" width="136" height="56" class="svTealSoft" style="stroke:#2b2926;stroke-width:2"></rect>
+  <text x="382" y="216" text-anchor="middle" class="svT" style="font-size:13px">L2 adapt &theta;</text>
+  <text x="382" y="235" text-anchor="middle" class="svN" style="letter-spacing:0">TTA/TTT online</text>
+  <text x="382" y="272" text-anchor="middle" class="svN" style="letter-spacing:0">Tent&#8594;SAR &#183; PAD</text>
+  <text x="382" y="286" text-anchor="middle" class="svN" style="letter-spacing:0">stereo/LiDAR TTA</text>
+  <text x="382" y="300" text-anchor="middle" class="svN" style="letter-spacing:0">TTT-VLA wave &#8217;26</text>
+  <!-- L3 -->
+  <rect x="458" y="126" width="136" height="260" class="svBox"></rect>
+  <rect x="458" y="126" width="136" height="56" class="svAmberSoft" style="stroke:#2b2926;stroke-width:2"></rect>
+  <text x="526" y="148" text-anchor="middle" class="svT" style="font-size:13px">L3 engine</text>
+  <text x="526" y="167" text-anchor="middle" class="svN" style="letter-spacing:0">verified experience</text>
+  <text x="526" y="204" text-anchor="middle" class="svN" style="letter-spacing:0">HIL-SERL &#183; Sirius</text>
+  <text x="526" y="218" text-anchor="middle" class="svN" style="letter-spacing:0">RoboCat &#183; SI-EFM</text>
+  <text x="526" y="232" text-anchor="middle" class="svN" style="letter-spacing:0">&pi;*0.6 RECAP</text>
+  <!-- L4 -->
+  <rect x="602" y="58" width="136" height="328" class="svBox"></rect>
+  <rect x="602" y="58" width="136" height="56" class="svCoralSoft" style="stroke:#2b2926;stroke-width:2"></rect>
+  <text x="670" y="80" text-anchor="middle" class="svT" style="font-size:13px">L4 recursive</text>
+  <text x="670" y="99" text-anchor="middle" class="svN" style="letter-spacing:0">improves the improver</text>
+  <text x="670" y="136" text-anchor="middle" class="svN" style="letter-spacing:0">Eureka &#183; DrEureka</text>
+  <text x="670" y="150" text-anchor="middle" class="svN" style="letter-spacing:0">GenSim &#183; RoboGen</text>
+  <text x="670" y="164" text-anchor="middle" class="svN" style="letter-spacing:0">(sim-only, fragments)</text>
+  <!-- riser annotation -->
+  <text x="430" y="84" text-anchor="middle" class="svN" style="letter-spacing:0;fill:#c2564a">the recursive step: byproducts of the loop</text>
+  <text x="430" y="100" text-anchor="middle" class="svN" style="letter-spacing:0;fill:#c2564a">start improving V, R, U themselves</text>
+  <path d="M 548 106 C 572 112 588 120 597 132" fill="none" stroke="#ef8677" stroke-width="2.2" stroke-dasharray="6 4" marker-end="url(#ah-coral)"></path>
+  <!-- axis labels -->
+  <text x="30" y="30" class="svN">WHAT IMPROVES &#8594;  NOTHING &#8594; ESTIMATES &#8594; WEIGHTS &#8594; THE POLICY LINEAGE &#8594; THE IMPROVER</text>
+</svg>
+</div>
+<figcaption><span class="figno">Fig. 9.</span> The ladder. Each rung subsumes the ones below it — a mature system runs L1 estimation and L2 perception adaptation <em>inside</em> an L3 engine. The step that earns the word &ldquo;recursive&rdquo; is the last one: when the verifiers, task proposers, simulators, and update machinery improve as byproducts of the loop&rsquo;s own operation. In robotics, L4 exists today only in fragments and mostly in simulation.</figcaption>
+</figure>
+
+<p>Where is everyone? The shipped-product world is overwhelmingly L0 with L1 sprinkled in (every RMA-style controller, every retrieval-augmented VLA). The perception stack of a serious autonomy company runs at L2. The frontier systems of &sect;6.2 are L3 — genuine engines, but with humans still pushing the flywheel at several points: choosing tasks, building the success detectors, approving redeploys. The practitioners&rsquo; dinner-table consensus that RSI is really about the data engine amounts to saying: <em>the ladder is climbed by engineering, rung by rung, and the model is only one component on it</em>.</p>
+
+<p>L4 deserves precision, because it&rsquo;s where the &ldquo;recursive&rdquo; in RSI either means something or doesn&rsquo;t. The operator view: L3 iterates <em class="m">&pi;<sub>k+1</sub> = T(&pi;<sub>k</sub>)</em> with <em class="m">T</em> fixed; L4 is <em class="m">T<sub>k+1</sub> = M(T<sub>k</sub>)</em> — the improvement machinery itself under improvement. Robotics already has real, if narrow, instances of <em class="m">M</em>: <strong>Eureka</strong> (<a href="https://arxiv.org/abs/2310.12931">Ma et al., ICLR 2024</a>) has an LLM evolve reward-function <em>code</em> against training outcomes, beating expert-written rewards on 83% of 29 tasks and unlocking pen-spinning on a Shadow Hand — the reward designer automated. <strong>DrEureka</strong> (<a href="https://arxiv.org/abs/2406.01967">RSS 2024</a>) extends it to the whole sim-to-real configuration — rewards <em>and</em> domain-randomization ranges — producing a quadruped balancing on a yoga ball with no human iteration. <strong>GenSim</strong> (<a href="https://arxiv.org/abs/2310.01361">ICLR 2024</a>) and <strong>RoboGen</strong> (<a href="https://arxiv.org/abs/2311.01455">ICML 2024</a>) automate the task and environment generator, growing the curriculum from the system&rsquo;s own previous tasks; <a href="https://arxiv.org/abs/2305.16291">Voyager (2023)</a> prototyped the same shape — auto-curriculum plus an ever-growing skill library — in Minecraft. Outside robotics the pattern is further along: the <a href="https://arxiv.org/abs/2505.22954">Darwin G&ouml;del Machine</a> rewrites its own agent code against benchmark selection (SWE-bench 20.0%&rarr;50.0%), and <a href="https://arxiv.org/abs/2506.13131">AlphaEvolve</a> runs evaluator-gated evolutionary search at industrial scale, recovering 0.7% of Google&rsquo;s fleet compute and speeding up its own successor&rsquo;s training kernels — the software world&rsquo;s existence proof that <em>evaluator-plus-evolution compounds</em>, which is Weng&rsquo;s harness-optimization loop with teeth.</p>
+
+<p>What separates robotics&rsquo; L4 fragments from a robotics L4 <em>system</em> is exactly the &sect;5 bottleneck, one level up: every one of those automated improvers leans on a cheap, trustworthy evaluator (RL training curves in sim, unit tests, benchmark scores). The recursive step for robots is therefore not &ldquo;let the LLM edit the policy&rdquo; — it&rsquo;s <strong>making the loop generate its own new verifiers</strong>: success detectors proposed from fleet failure clusters and validated against human spot-checks; simulators recalibrated from deployment logs (real-to-sim as an automatic byproduct, so the sim gate of Fig.&nbsp;7 sharpens as the fleet runs); instrumentation suggested by the failure-analysis agents of &sect;7. Each of these is <em class="m">M</em> acting on <em class="m">V</em>, and each is buildable with current parts. When a fleet&rsquo;s verification capacity grows as a function of the fleet&rsquo;s own operation — that is the day the gain of the loop, per cycle,</p>
+
+<div class="eq"><em class="m">G &nbsp;&asymp;&nbsp; (coverage of practice) &times; (verifier yield) &times; (update efficiency) &nbsp;&minus;&nbsp; (regressions + forgetting)</em></div>
+
+<p>stops being a constant you engineered and becomes a quantity that compounds. I don&rsquo;t think that day arrives as an event; it arrives per-task, then per-site, then per-fleet, the way it arrived per-benchmark in software. The two falsification tests from &sect;7 — predictable scaling, cross-domain transfer — are how you&rsquo;ll know whether you&rsquo;re on the ladder or just running in place.</p>
+
+<h2 id="open">9. Open Problems</h2>
+
+<p>Where I&rsquo;d put graduate students, in rough order of leverage:</p>
+
+<ol>
+  <li><p><strong>Verifiers that generalize.</strong> Every L3 system hand-builds its judge. The field needs foundation success/progress models that transfer across tasks the way policies now do — and, harder, ways to keep them honest under optimization pressure: verifier ensembles with disagreement flags, scheduled physical spot-checks, formal properties where the task affords them. Verifier versioning (&sect;5) should become as standard as dataset versioning.</p></li>
+  <li><p><strong>Certifiable adaptation.</strong> Marry the TTA toolbox to runtime assurance: adapters whose transient behavior is bounded by construction, Neural-Fly-style, even when the adapted thing is a 3B-parameter VLA. This is also a regulatory question — nobody has a good story for what a safety case means when weights change nightly — and the answer will probably look like bounded-plasticity envelopes plus gated promotion, not frozen models.</p></li>
+  <li><p><strong>Fleet integration without forgetting.</strong> The accounting problem of &sect;4: which per-unit adaptations are noise, which are local state, which are discoveries to consolidate. Sparse, targeted parameter updates (memory-layer finetuning in Lin&rsquo;s sense) are the most promising mechanism I know of for the consolidation step; nobody has run them at fleet scale on robots. And RDumb&rsquo;s lesson looms: any consolidation scheme must beat the embarrassing baseline of periodically resetting to base and re-collecting.</p></li>
+  <li><p><strong>Closed-loop theory.</strong> TTA theory assumes the test distribution ignores the model; a robot&rsquo;s doesn&rsquo;t. What are regret bounds for an adapter inside its own feedback loop? When does online perception adaptation damp the compounding-error spiral versus amplify it? Adaptive control solved this for linear plants fifty years ago; the nonlinear, learned, high-dimensional version is open and is the theory question of this whole area.</p></li>
+  <li><p><strong>Benchmarks that fight back.</strong> There is no ImageNet-C for manipulation — no standard way to claim &ldquo;my policy adapts.&rdquo; The ingredients exist (CCC&rsquo;s unbounded streams, UniTTA&rsquo;s realism grid, on-device benchmarks like BoTTA), but the robot version needs closed-loop streams, recurring domains, months-long horizons, and adaptation-under-latency scoring. Call it CoRL-C. Until it exists, every claim in &sect;6.3&rsquo;s young TTT-for-VLA cluster should be held loosely.</p></li>
+  <li><p><strong>Dreams need physics checks.</strong> World-model data engines (DreamGen) inject experience no physical verifier ever touched. What is the equivalent of a unit test for a dreamed trajectory? Cross-checking dreams against calibrated simulators, cycle-consistency with inverse dynamics, and selective real-world audit of dream-derived behaviors are all unbuilt.</p></li>
+  <li><p><strong>The robot&rsquo;s own body as distribution shift.</strong> Wear, backlash, thermal drift, a re-torqued gripper — the shift no vision benchmark models, entangled as a hidden confounder in every fleet dataset. Continuous physical self-identification (the &sect;3 lineage) deserves first-class status in the data engine: log the body state with the experience, or the fleet&rsquo;s pooled data quietly stops being exchangeable.</p></li>
+</ol>
+
+<hr class="sect">
+
+<p>The through-line of this post is short enough to state twice. Mainstream ML treats test time as an exam; robotics has to treat it as a career. The adaptation literature — read charitably, as this post has tried to — supplies the reflexes for that career: cheap self-supervision, anchored online updates, bounded fast adaptation. But reflexes only track the world. Getting <em>better</em> at the job requires a judge, and everything currently working in robot self-improvement, from a reward classifier watching an arm insert RAM to a value function grading a fleet&rsquo;s espresso runs, is downstream of someone standing up a verifier and wiring it into a loop. The models are ready before the loops are. If Weng&rsquo;s essay argued that harness engineering is how software agents will bootstrap, the robotics corollary is that <strong>the data engine is the robot&rsquo;s harness</strong> — and the teams that treat verification, credit, gating, and consolidation as the product, not as glue, are the ones whose robots will be measurably better every month they run. That is what RSI will look like in this field: not a daemon rewriting itself, but a well-instrumented loop whose gain, one unglamorous task at a time, crosses one.</p>
+
+<h2 id="citation">Citation</h2>
+
+<p>Cited as:</p>
+
+<blockquote><p>Alice. &ldquo;Learning on the Job: Test-Time Adaptation and the Road to Self-Improving Robots.&rdquo; conamur.ai blog (Sep 2026).</p></blockquote>
+
+<p>Or</p>
+
+<pre class="bibtex">@article{alice2026learningonthejob,
+  title   = {Learning on the Job: Test-Time Adaptation and the Road to Self-Improving Robots},
+  author  = {Alice},
+  journal = {conamur.ai blog},
+  year    = {2026},
+  month   = {September}
+}</pre>
+
+<h2 id="references">References</h2>
+
+<div class="refs">
+<ol>
+  <li>Good, I. J. <a href="https://philpapers.org/rec/GOOSCT">&ldquo;Speculations Concerning the First Ultraintelligent Machine.&rdquo;</a> <em>Advances in Computers</em>, 6:31&ndash;88, 1965.</li>
+  <li>Yudkowsky, E. <a href="https://www.lesswrong.com/posts/JBadX7rwdcRFzGuju/recursive-self-improvement">&ldquo;Recursive Self-Improvement.&rdquo;</a> LessWrong, 2008.</li>
+  <li>Weng, L. <a href="https://lilianweng.github.io/posts/2026-07-04-harness/">&ldquo;Harness Engineering for Self-Improvement.&rdquo;</a> Lil&rsquo;Log, Jul 2026.</li>
+  <li>Liang, J., He, R. &amp; Tan, T. <a href="https://arxiv.org/abs/2303.15361">&ldquo;A Comprehensive Survey on Test-Time Adaptation under Distribution Shifts.&rdquo;</a> IJCV 2024. Companion list: <a href="https://github.com/tim-learn/awesome-test-time-adaptation">awesome-test-time-adaptation</a>.</li>
+  <li>Liang, J. et al. <a href="https://arxiv.org/abs/2002.08546">&ldquo;Do We Really Need to Access the Source Data? Source Hypothesis Transfer for Unsupervised Domain Adaptation (SHOT).&rdquo;</a> ICML 2020.</li>
+  <li>Sun, Y. et al. <a href="https://arxiv.org/abs/1909.13231">&ldquo;Test-Time Training with Self-Supervision for Generalization under Distribution Shifts.&rdquo;</a> ICML 2020.</li>
+  <li>Gandelsman, Y. et al. <a href="https://arxiv.org/abs/2209.07522">&ldquo;Test-Time Training with Masked Autoencoders.&rdquo;</a> NeurIPS 2022.</li>
+  <li>Zhang, M. et al. <a href="https://arxiv.org/abs/2110.09506">&ldquo;MEMO: Test Time Robustness via Adaptation and Augmentation.&rdquo;</a> NeurIPS 2022.</li>
+  <li>Wang, D. et al. <a href="https://arxiv.org/abs/2006.10726">&ldquo;Tent: Fully Test-Time Adaptation by Entropy Minimization.&rdquo;</a> ICLR 2021.</li>
+  <li>Wang, Q. et al. <a href="https://arxiv.org/abs/2203.13591">&ldquo;Continual Test-Time Domain Adaptation (CoTTA).&rdquo;</a> CVPR 2022.</li>
+  <li>Niu, S. et al. <a href="https://arxiv.org/abs/2204.02610">&ldquo;Efficient Test-Time Model Adaptation without Forgetting (EATA).&rdquo;</a> ICML 2022.</li>
+  <li>Niu, S. et al. <a href="https://arxiv.org/abs/2302.12400">&ldquo;Towards Stable Test-Time Adaptation in Dynamic Wild World (SAR).&rdquo;</a> ICLR 2023.</li>
+  <li>Gong, T. et al. <a href="https://arxiv.org/abs/2208.05117">&ldquo;NOTE: Robust Continual Test-Time Adaptation Against Temporal Correlation.&rdquo;</a> NeurIPS 2022.</li>
+  <li>Yuan, L. et al. <a href="https://arxiv.org/abs/2303.13899">&ldquo;Robust Test-Time Adaptation in Dynamic Scenarios (RoTTA).&rdquo;</a> CVPR 2023.</li>
+  <li>Saerens, M. et al. <a href="https://doi.org/10.1162/089976602753284446">&ldquo;Adjusting the Outputs of a Classifier to New a Priori Probabilities.&rdquo;</a> <em>Neural Computation</em> 14(1), 2002.</li>
+  <li>Lipton, Z. et al. <a href="https://arxiv.org/abs/1802.03916">&ldquo;Detecting and Correcting for Label Shift with Black Box Predictors (BBSE).&rdquo;</a> ICML 2018.</li>
+  <li>Sun, Y. et al. <a href="https://arxiv.org/abs/2407.04620">&ldquo;Learning to (Learn at Test Time): RNNs with Expressive Hidden States.&rdquo;</a> arXiv 2024.</li>
+  <li>Schlag, I., Irie, K. &amp; Schmidhuber, J. <a href="https://arxiv.org/abs/2102.11174">&ldquo;Linear Transformers Are Secretly Fast Weight Programmers.&rdquo;</a> ICML 2021.</li>
+  <li>Schmidhuber, J. <a href="https://ieeexplore.ieee.org/document/6796337">&ldquo;Learning to Control Fast-Weight Memories.&rdquo;</a> <em>Neural Computation</em> 4(1), 1992.</li>
+  <li>Behrouz, A. et al. <a href="https://arxiv.org/abs/2501.00663">&ldquo;Titans: Learning to Memorize at Test Time.&rdquo;</a> arXiv 2024.</li>
+  <li>Dalal, K. et al. <a href="https://arxiv.org/abs/2504.05298">&ldquo;One-Minute Video Generation with Test-Time Training.&rdquo;</a> CVPR 2025.</li>
+  <li>Zhao, H. et al. <a href="https://arxiv.org/abs/2306.02929">&ldquo;On Pitfalls of Test-Time Adaptation.&rdquo;</a> ICML 2023.</li>
+  <li>Press, O. et al. <a href="https://arxiv.org/abs/2306.05401">&ldquo;RDumb: A Simple Approach that Questions Our Progress in Continual Test-Time Adaptation.&rdquo;</a> NeurIPS 2023.</li>
+  <li>&Aring;str&ouml;m, K. J. &amp; Wittenmark, B. <a href="https://www.sciencedirect.com/science/article/abs/pii/0005109873900737">&ldquo;On Self Tuning Regulators.&rdquo;</a> <em>Automatica</em> 9(2), 1973.</li>
+  <li>O&rsquo;Connell, M. et al. <a href="https://arxiv.org/abs/2205.06908">&ldquo;Neural-Fly Enables Rapid Learning for Agile Flight in Strong Winds.&rdquo;</a> <em>Science Robotics</em> 7(66), 2022.</li>
+  <li>Yu, W. et al. <a href="https://arxiv.org/abs/1702.02453">&ldquo;Preparing for the Unknown: Learning a Universal Policy with Online System Identification (UP-OSI).&rdquo;</a> RSS 2017.</li>
+  <li>Kumar, A. et al. <a href="https://arxiv.org/abs/2107.04034">&ldquo;RMA: Rapid Motor Adaptation for Legged Robots.&rdquo;</a> RSS 2021.</li>
+  <li>Qi, H. et al. <a href="https://arxiv.org/abs/2210.04887">&ldquo;In-Hand Object Rotation via Rapid Motor Adaptation.&rdquo;</a> CoRL 2022.</li>
+  <li>Nagabandi, A. et al. <a href="https://arxiv.org/abs/1803.11347">&ldquo;Learning to Adapt in Dynamic, Real-World Environments Through Meta-Reinforcement Learning.&rdquo;</a> ICLR 2019.</li>
+  <li>Mancini, M. et al. <a href="https://arxiv.org/abs/1807.01028">&ldquo;Kitting in the Wild through Online Domain Adaptation (ONDA).&rdquo;</a> IROS 2018.</li>
+  <li>Tonioni, A. et al. <a href="https://arxiv.org/abs/1810.05424">&ldquo;Real-Time Self-Adaptive Deep Stereo.&rdquo;</a> CVPR 2019.</li>
+  <li>Jang, H. et al. <a href="https://arxiv.org/abs/2410.15674">&ldquo;TALoS: Enhancing Semantic Scene Completion via Test-time Adaptation on the Line of Sight.&rdquo;</a> NeurIPS 2024.</li>
+  <li>Gao, J. et al. <a href="https://openreview.net/forum?id=Zos5wsaB5r">&ldquo;Fast-Slow Test-Time Adaptation for Online Vision-and-Language Navigation (FSTTA).&rdquo;</a> ICML 2024.</li>
+  <li>Park, D. et al. <a href="https://arxiv.org/abs/2403.10052">&ldquo;T4P: Test-Time Training of Trajectory Prediction via Masked Autoencoder and Actor-specific Token Memory.&rdquo;</a> CVPR 2024.</li>
+  <li>Hansen, N. et al. <a href="https://arxiv.org/abs/2007.04309">&ldquo;Self-Supervised Policy Adaptation during Deployment (PAD).&rdquo;</a> ICLR 2021.</li>
+  <li>Mirza, M. J. et al. <a href="https://arxiv.org/abs/2307.06333">&ldquo;Diagnosis, Feedback, Adaptation: A Human-in-the-Loop Framework for Test-Time Policy Adaptation (DFA).&rdquo;</a> ICML 2023.</li>
+  <li>Liu, J. et al. <a href="https://arxiv.org/abs/2306.14479">&ldquo;Design from Policies: Conservative Test-Time Adaptation for Offline Policy Optimization (DROP).&rdquo;</a> NeurIPS 2023.</li>
+  <li>Ge, Y. et al. <a href="https://arxiv.org/abs/2212.07398">&ldquo;Policy Adaptation from Foundation Model Feedback (PAFF).&rdquo;</a> CVPR 2023.</li>
+  <li>Ross, S., Gordon, G. &amp; Bagnell, D. <a href="https://arxiv.org/abs/1011.0686">&ldquo;A Reduction of Imitation Learning and Structured Prediction to No-Regret Online Learning (DAgger).&rdquo;</a> AISTATS 2011.</li>
+  <li>Lin, J. <a href="https://jessylin.com/2025/10/20/continual-learning/">&ldquo;The Continual Learning Problem.&rdquo;</a> Blog, Oct 2025; and <a href="https://arxiv.org/abs/2510.15103">&ldquo;Continual Learning via Sparse Memory Finetuning.&rdquo;</a> arXiv 2025.</li>
+  <li>Silver, D. &amp; Sutton, R. <a href="https://storage.googleapis.com/deepmind-media/Era-of-Experience%20/The%20Era%20of%20Experience%20Paper.pdf">&ldquo;Welcome to the Era of Experience.&rdquo;</a> 2025.</li>
+  <li>Weng, L. <a href="https://lilianweng.github.io/posts/2024-11-28-reward-hacking/">&ldquo;Reward Hacking in Reinforcement Learning.&rdquo;</a> Lil&rsquo;Log, Nov 2024.</li>
+  <li>Liu, H. et al. <a href="https://arxiv.org/abs/2211.08416">&ldquo;Robot Learning on the Job: Human-in-the-Loop Autonomy and Learning During Deployment (Sirius).&rdquo;</a> RSS 2023.</li>
+  <li>Smith, L., Kostrikov, I. &amp; Levine, S. <a href="https://arxiv.org/abs/2208.07860">&ldquo;A Walk in the Park: Learning to Walk in 20 Minutes with Model-Free Reinforcement Learning.&rdquo;</a> RSS 2023 (demo).</li>
+  <li>Wu, P. et al. <a href="https://arxiv.org/abs/2206.14176">&ldquo;DayDreamer: World Models for Physical Robot Learning.&rdquo;</a> CoRL 2022.</li>
+  <li>Ball, P. et al. <a href="https://arxiv.org/abs/2302.02948">&ldquo;Efficient Online Reinforcement Learning with Offline Data (RLPD).&rdquo;</a> ICML 2023.</li>
+  <li>Luo, J. et al. <a href="https://arxiv.org/abs/2401.16013">&ldquo;SERL: A Software Suite for Sample-Efficient Robotic Reinforcement Learning.&rdquo;</a> ICRA 2024.</li>
+  <li>Luo, J. et al. <a href="https://arxiv.org/abs/2410.21845">&ldquo;Precise and Dexterous Robotic Manipulation via Human-in-the-Loop Reinforcement Learning (HIL-SERL).&rdquo;</a> <em>Science Robotics</em>, 2025.</li>
+  <li>Stachowicz, K. et al. <a href="https://arxiv.org/abs/2304.09831">&ldquo;FastRLAP: A System for Learning High-Speed Driving via Deep RL and Autonomous Practicing.&rdquo;</a> CoRL 2023.</li>
+  <li>Bousmalis, K. et al. <a href="https://arxiv.org/abs/2306.11706">&ldquo;RoboCat: A Self-Improving Generalist Agent for Robotic Manipulation.&rdquo;</a> TMLR 2023.</li>
+  <li>Ahn, M. et al. <a href="https://arxiv.org/abs/2401.12963">&ldquo;AutoRT: Embodied Foundation Models for Large Scale Orchestration of Robotic Agents.&rdquo;</a> arXiv 2024.</li>
+  <li>Seyed Ghasemipour, S. K. et al. <a href="https://arxiv.org/abs/2509.15155">&ldquo;Self-Improving Embodied Foundation Models.&rdquo;</a> NeurIPS 2025.</li>
+  <li>Physical Intelligence. <a href="https://www.pi.website/blog/pistar06">&ldquo;&pi;*0.6: a VLA That Learns From Experience (RECAP).&rdquo;</a> Nov 2025; <a href="https://arxiv.org/abs/2511.14759">arXiv 2511.14759</a>.</li>
+  <li>Google DeepMind. <a href="https://deepmind.google/blog/gemini-robotics-15-brings-ai-agents-into-the-physical-world/">&ldquo;Gemini Robotics 1.5 Brings AI Agents into the Physical World.&rdquo;</a> Sep 2025.</li>
+  <li>Jang, J. et al. <a href="https://arxiv.org/abs/2505.12705">&ldquo;DreamGen: Unlocking Generalization in Robot Learning through Video World Models.&rdquo;</a> arXiv 2025.</li>
+  <li>Figure AI. <a href="https://www.figure.ai/news/scaling-helix-logistics">&ldquo;Scaling Helix: A New State of the Art in Humanoid Logistics.&rdquo;</a> Jun 2025 (company report).</li>
+  <li>Dyna Robotics. <a href="https://www.dyna.co/research/dyna-1">&ldquo;DYNA-1 Model.&rdquo;</a> 2025 (company report).</li>
+  <li>Nakamoto, M. et al. <a href="https://arxiv.org/abs/2410.13816">&ldquo;Steering Your Generalists: Improving Robotic Foundation Models via Value Guidance (V-GPS).&rdquo;</a> CoRL 2024.</li>
+  <li>Kwok, J. et al. <a href="https://arxiv.org/abs/2506.17811">&ldquo;RoboMonkey: Scaling Test-Time Sampling and Verification for Vision-Language-Action Models.&rdquo;</a> CoRL 2025.</li>
+  <li>Jang, S. et al. <a href="https://arxiv.org/abs/2510.05681">&ldquo;Verifier-Free Test-Time Sampling for Vision-Language-Action Models (MG-Select).&rdquo;</a> ICLR 2026.</li>
+  <li>Zawalski, M. et al. <a href="https://arxiv.org/abs/2407.08693">&ldquo;Robotic Control via Embodied Chain-of-Thought Reasoning (ECoT).&rdquo;</a> CoRL 2024.</li>
+  <li>Bai, Z. et al. <a href="https://arxiv.org/abs/2512.14666">&ldquo;EVOLVE-VLA: Test-Time Training from Environment Feedback for Vision-Language-Action Models.&rdquo;</a> arXiv 2025.</li>
+  <li>Liu, C. et al. <a href="https://arxiv.org/abs/2601.06748">&ldquo;TT-VLA: On-the-Fly VLA Adaptation via Test-Time Reinforcement Learning.&rdquo;</a> arXiv 2026.</li>
+  <li>Zhang, W. et al. <a href="https://arxiv.org/abs/2606.03127">&ldquo;TTT-VLA: Test-Time Latent Prompt Optimization for Vision-Language-Action Models.&rdquo;</a> arXiv 2026.</li>
+  <li>Ji, H. et al. <a href="https://arxiv.org/abs/2608.09448">&ldquo;VANE: Reliable Test-Time Training for Vision-Language-Action Models via Future Visual Representation Prediction.&rdquo;</a> arXiv 2026.</li>
+  <li>Jiang, Y. et al. <a href="https://arxiv.org/abs/2607.15275">&ldquo;RoboTTT: Context Scaling for Robot Policies.&rdquo;</a> arXiv 2026.</li>
+  <li>Xu, C. et al. <a href="https://arxiv.org/abs/2412.09858">&ldquo;RLDG: Robotic Generalist Policy Distillation via Reinforcement Learning.&rdquo;</a> arXiv 2024.</li>
+  <li>Chen, Y. et al. <a href="https://arxiv.org/abs/2502.05450">&ldquo;ConRFT: A Reinforced Fine-tuning Method for VLA Models via Consistency Policy.&rdquo;</a> RSS 2025.</li>
+  <li>Li, H. et al. <a href="https://arxiv.org/abs/2509.09674">&ldquo;SimpleVLA-RL: Scaling VLA Training via Reinforcement Learning.&rdquo;</a> arXiv 2025.</li>
+  <li>Guo, Y. et al. <a href="https://arxiv.org/abs/2501.16664">&ldquo;Improving Vision-Language-Action Model with Online Reinforcement Learning (iRe-VLA).&rdquo;</a> ICRA 2025.</li>
+  <li>Lu, G. et al. <a href="https://arxiv.org/abs/2505.18719">&ldquo;VLA-RL: Towards Masterful and General Robotic Manipulation with Scalable Reinforcement Learning.&rdquo;</a> arXiv 2025.</li>
+  <li>Ma, Y. J. et al. <a href="https://arxiv.org/abs/2310.12931">&ldquo;Eureka: Human-Level Reward Design via Coding Large Language Models.&rdquo;</a> ICLR 2024.</li>
+  <li>Ma, Y. J. et al. <a href="https://arxiv.org/abs/2406.01967">&ldquo;DrEureka: Language Model Guided Sim-To-Real Transfer.&rdquo;</a> RSS 2024.</li>
+  <li>Wang, L. et al. <a href="https://arxiv.org/abs/2310.01361">&ldquo;GenSim: Generating Robotic Simulation Tasks via Large Language Models.&rdquo;</a> ICLR 2024.</li>
+  <li>Wang, Y. et al. <a href="https://arxiv.org/abs/2311.01455">&ldquo;RoboGen: Towards Unleashing Infinite Data for Automated Robot Learning via Generative Simulation.&rdquo;</a> ICML 2024.</li>
+  <li>Wang, G. et al. <a href="https://arxiv.org/abs/2305.16291">&ldquo;Voyager: An Open-Ended Embodied Agent with Large Language Models.&rdquo;</a> arXiv 2023.</li>
+  <li>Zhang, J. et al. <a href="https://arxiv.org/abs/2505.22954">&ldquo;Darwin G&ouml;del Machine: Open-Ended Evolution of Self-Improving Agents.&rdquo;</a> arXiv 2025.</li>
+  <li>Novikov, A. et al. <a href="https://arxiv.org/abs/2506.13131">&ldquo;AlphaEvolve: A Coding Agent for Scientific and Algorithmic Discovery.&rdquo;</a> Google DeepMind, 2025.</li>
+</ol>
+</div>
+
+<div class="tags">
+  <span>robotics</span><span>test-time-adaptation</span><span>test-time-training</span><span>self-improvement</span><span>reinforcement-learning</span><span>vla</span><span>data-engine</span>
+</div>
+
+</div>
+<footer class="site-foot">
+  <span>&copy; 2026 Alice</span>
+  <span><a href="../../">Field Notes</a> &middot; built by hand</span>
+</footer>
+</body>
+</html>
